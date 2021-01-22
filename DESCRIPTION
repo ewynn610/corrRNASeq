@@ -1,16 +1,26 @@
 Package: corrRNASeq
-Title: What the Package Does (One Line, Title Case)
+Title: Model Fitting for Correlated RNA-Seq Count Data
 Version: 0.0.0.9000
+Imports: 
+  lme4,
+  lmerTest,
+  MASS, 
+  Matrix,
+  pbkrtest,
+  methods,
+  geepack,
+  geesmv
+Depends: pbkrtest
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Elizabeth",
+           family = "Wynn",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+           email = "elizabeth.2.wynn@cuanschutz.edu")
+Description: This package provides functions for fitting pseudo-likelihood negative binomial mixed models and generalized estimating equations with small sample variance estimates. These functions are useful to fit models for correlated count data, including data obtained from RNA-Sequencing.
 License: `use_mit_license()`, `use_gpl3_license()` or friends to
     pick a license
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
+URL: https://github.com/ewynn610/corrRNASeq
