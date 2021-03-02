@@ -30,8 +30,11 @@
 #' this issue.
 #' @param corstr a character string specifying the correlation structure. The following are permitted: "independence", "exchangeable", "ar1", and "unstructured"
 #' @param small.samp.method a character string specifying the
-#' correlation structure. The following are permitted: "pan" for the
+#' small sample method. The following are permitted: "pan" for the
 #' Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
+#' If \code{small.samp.method} is null, small sample variance estimates are not computed.
+#' The resulting object will be identical to the object created if
+#' \code{geeglm} from the \pkg{geepack}-package was used.
 #' @param ... additional arguments passed on to \code{geepack::geeglm}.
 #'
 #' @import geepack geesmv
@@ -75,8 +78,14 @@
 #Use geepack instead of gee model
 #Doesn't support binomial model
 
-geeglm_small_samp<-function (formula, family = poisson, data, id,
-                       corstr = "exchangeable", small.samp.method, sort=T, ...)
+geeglm_small_samp<-function (formula,
+                             family = poisson,
+                             data,
+                             id,
+                             corstr = "exchangeable",
+                             small.samp.method="wl",
+                             sort=T,
+                             ...)
 {
   call <- match.call(expand.dots = TRUE)
   if (is.null(data$id)) {
@@ -108,9 +117,13 @@ geeglm_small_samp<-function (formula, family = poisson, data, id,
   ###Use geepack model (geesmv fits "gee" package model)###
   #Calling geeglm
   call_list<-as.list(call)
+  if(is.null(call_list$family)) call_list$family=quote(poisson)
+  if(is.null(call_list$corstr)) call_list$corstr="exchangeable"
   call_list[[1]]<-call_list$small.samp.method<-call_list$sort<-NULL
   gee.fit<-do.call("geeglm", call_list)
 
+  #If small samp method is provided
+  if(!is.null(small.samp.method)){
   beta_est <- gee.fit$coefficients
   alpha <- summary(gee.fit)$corr[[1]]
 
@@ -324,6 +337,8 @@ geeglm_small_samp<-function (formula, family = poisson, data, id,
     step14 %*% kronecker(solve(step11), solve(step11))
   gee.fit$small.samp.var<-diag(cov.beta)
   names(gee.fit$small.samp.var)<-names(gee.fit$coefficients)
+  }
   gee.fit$call<-call
   return(gee.fit)
 }
+

@@ -10,7 +10,7 @@ geeglm_small_samp(
   data,
   id,
   corstr = "exchangeable",
-  small.samp.method,
+  small.samp.method = "wl",
   sort = T,
   ...
 )
@@ -38,8 +38,11 @@ this issue.}
 \item{corstr}{a character string specifying the correlation structure. The following are permitted: "independence", "exchangeable", "ar1", and "unstructured"}
 
 \item{small.samp.method}{a character string specifying the
-correlation structure. The following are permitted: "pan" for the
-Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.}
+small sample method. The following are permitted: "pan" for the
+Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
+If \code{small.samp.method} is null, small sample variance estimates are not computed.
+The resulting object will be identical to the object created if
+\code{geeglm} from the \pkg{geepack}-package was used.}
 
 \item{...}{additional arguments passed on to \code{geepack::geeglm}.}
 }
