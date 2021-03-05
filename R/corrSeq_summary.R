@@ -1,16 +1,26 @@
 #' Function to summarize individual regression coefficients
 #'
-#' Conducts t-tests on individual regression coefficients from fits done using lmerSeq_fit function
+#' Conducts t-tests on individual regression coefficients from models fit using \code{\link{corrSeq_fit}}.
 #'
-#' @param corrSeq_results Results object from running corrSeq_fit
+#' @param corrSeq_results Results object from running \code{\link{corrSeq_fit}}.
 #' @param coefficient Character string or numeric indicator of which coefficient to summarize
-#' @param p_adj_method Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See p.adjust.methods
+#' @param p_adj_method Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}.
 #' @param ddf Method for computing degrees of freedom and t-statistics.
-#' The options "Satterthwaite" and "Kenward-Roger" can be used for
-#' models fit only using nbmm_pl or lmm. Options "containment" and
+#' The options "Satterthwaite" and "Kenward-Roger" can only be used for
+#' models fit using nbmm_pl or lmm. Options "containment" and
 #' "residual" can be used for models fit using any method. Alternatively, a single numeric value representing the ddf for all tests can also be given.
 #' @param sort_results Should the results table be sorted by adjusted p-value?
 #'
+#' @return This function returns a list object with the following components:
+#' @param coefficient Name of the coefficient being summarized.
+#' @param summary_table A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.
+#' @param ddf Method for computing the degrees of freedom.
+#' @param p_adj_method Method for adjusting the raw p-values.
+#' @param singular_fits Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.
+#' @param method Method used to fit the models.
+#'@author Elizabeth Wynn
+#'
+#' @seealso \code{\link{corrSeq_fit}} \code{\link{geeglm_small_samp}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link[glmmADMB]{glmmadmb}}
 #' @examples
 #' data("simdata")
 #' sample_meta_data <- simdata$metadata

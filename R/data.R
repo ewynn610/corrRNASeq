@@ -8,6 +8,5 @@
 #' \describe{
 #'   \item{counts}{gene expression values}
 #'   \item{metadata}{data frame with variables for group, time, and subject ID.  Rows are in the same order as columns of counts}
-#'   ...
 #' }
 "simdata"

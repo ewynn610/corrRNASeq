@@ -32,13 +32,13 @@ glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
 #############################################################
 #' Pseudo-Likelihood Negative Binomial Mixed Model
 #'
-#' This function to fits a generalized linear mixed model using a
-#' Psuedo-Likelihood approach
+#' This function to fits a negative binomial mixed model using a
+#' psuedo-likelihood approach
 #'
 #' This function is similar to the function \code{\link[NBZIMM]{glmm.nb}}
-#' from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest}
-#' than \pkg{nlme} and returns and object compatible with the \pkg{pkrtest} package
-#' which allows for the calculation of Kenward-Roger degrees of freedom
+#' from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest} package
+#' rather than \pkg{nlme} package and returns and object compatible with the \pkg{pkrtest} package
+#' which allows for the calculation of Kenward-Roger degrees of freedom.
 #' (see \code{\link[pbkrtest]{krmodcomp}},
 #' \code{\link[lmerTest]{contest.lmerModLmerTest}})
 #'
@@ -49,6 +49,7 @@ glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
 #' @param formula A two-sided linear formula describing both the fixed-effects and random-effects parts of the model using the syntax of the lme4 package.
 #' @param data An optional data frame containing the model variables.
 #' @param niter Maximum number of iterations.
+#' @param epsilon	Positive convergence tolerance.
 #' @param verbose Logical. Should the number of iterations and computational time be printed?
 #' @param REML Logical. Should the models be fit with REML or regular ML?
 #'
@@ -75,7 +76,9 @@ glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
 #'
 
 
-glmm_nb_lmer<-function (formula, data, niter = 40, niter_theta=5, niter_theta.ml = 5, epsilon = 1e-08, verbose = TRUE, REML=TRUE){
+glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TRUE, REML=TRUE){
+  niter_theta=5
+  niter_theta.ml = 5
   start.time <- Sys.time()
 
   #Function inside of packag

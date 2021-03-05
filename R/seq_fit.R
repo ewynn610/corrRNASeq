@@ -1,22 +1,22 @@
 #' Function to fit various types of models to longitudinal RNA-Seq data
 #'
-#' Wrapper function that fits one of four different types of models to RNA-Seq data. Available model fitting methods are linear mixed models (lmm) (using transformed data), generalized estimating equations (gee), and negative binomial models using either
+#' Wrapper function that fits one of four types of models to RNA-Seq data. Available model fitting methods are linear mixed models (lmm) (using transformed data), generalized estimating equations with an optional small sample adjustment (gee), and negative binomial models using either
 #' a pseudo-likelhood approach (nbmm_pl) or a maximum likelihood approach (nbmm_ml).
 #'
-#' @param formula A one-sided linear formula describing both the model effects of the model. For \code{"lmm"}, \code{"nbmm_pl"} and \code{"nbmm_ml"} random effects should be included in the formula using the syntax of the lme4 package.
-#' @param expr_mat A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{"gee"}, \code{"nbmm_pl"} and \code{"nbmm_ml"}, the matrix should contain raw counts and for \code{"lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.
-#' @param gene_names An optional character vector of gene names (length G).  If unspecified, row names from the expression matrix will be used.
+#' @param formula A one-sided linear formula describing both the model effects of the model. For \code{"method=lmm"}, \code{"method=nbmm_pl"} and \code{"method=nbmm_ml"}, random effects should be included in the formula using the syntax of the lme4 package.
+#' @param expr_mat A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{"method=gee"}, \code{"method=nbmm_pl"} and \code{"method=nbmm_ml"}, the matrix should contain raw counts and for \code{"method=lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.
+#' @param gene_names An optional character vector of gene names (length G).
 #' @param sample_data Data frame with N rows containing the fixed- and random-effects terms included in the formula.  The rows of the data frame must correspond (and be in the same order as) the columns of the expression matrix.
 #' @param method Method to use to fit the models. Possible options are \code{"lmm"}, \code{"gee"}, \code{"nbmm_pl"} and \code{"nbmm_ml"}.
 #' @param parallel If on Mac or linux, use forking (via mclapply) to parallelize fits
-#' @param id Only applicable for models fit using the \code{"gee"} method. A vector or data column name which identifies the clusters. The length of
+#' @param id Only applicable for models fit using the \code{"method=gee"} method. A vector or data column name which identifies the clusters. The length of
 #' ‘id’ should be the same as the number of observations. Data are
 #' assumed to be sorted so that observations on each cluster appear
 #' as contiguous rows in data. If data is not sorted this way, the
 #' function will not identify the clusters correctly. If \code{sort=TRUE} (default),
 #' the dataframe from the \code{data} argument is sorted by the id column to avoid
 #' this issue.
-#' @param small.samp.method Only applicable for models fit using the \code{"gee"} method. A character string specifying the
+#' @param small.samp.method Only applicable for models fit using the \code{"method=gee"} method. A character string specifying the
 #' small sample method. The following are permitted: "pan" for the
 #' Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
 #' If \code{small.samp.method} is null, small sample variance estimates are not computed.

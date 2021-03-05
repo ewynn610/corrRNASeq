@@ -17,7 +17,7 @@
 #'  on the left of a ~ operator and the terms, separated by + operators, on the right.
 #' @param family a description of the error distribution and link
 #' function to be used in the model. Only \code{guassian} and \code{poisson}
-#' families supported.
+#' families are supported.
 #' @param data 	an optional data frame, list or environment (or object coercible by as.data.frame to a data frame)
 #' containing the variables in the model and the id variable. If not
 #' environment(formula), typically the environment from which the function is called.
@@ -30,17 +30,16 @@
 #' this issue.
 #' @param corstr a character string specifying the correlation structure. The following are permitted: "independence", "exchangeable", "ar1", and "unstructured"
 #' @param small.samp.method a character string specifying the
-#' small sample method. The following are permitted: "pan" for the
-#' Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
+#' small sample method. The following are permitted: \code{"pan"} for the
+#' Pan (2001) method, \code{"md"} for the Mancl and Derouen (2001) method, and \code{"wl"} for the Wang and Long (2011) method.
 #' If \code{small.samp.method} is null, small sample variance estimates are not computed.
 #' The resulting object will be identical to the object created if
 #' \code{geeglm} from the \pkg{geepack}-package was used.
 #' @param ... additional arguments passed on to \code{geepack::geeglm}.
 #'
 #' @import geepack geesmv
-#' @return A \code{geeglm} object with two additional items:
-#' 1) \code{small.samp.var} which contains the small sample variance estimators using the specified method and 2)
-#' \code{small.samp.cov.var} which contains the variance-covariance matrix for the variance estimator.
+#' @return This function returns a \code{geeglm} object with one additional items:
+#' @param small.samp.var small sample variance estimators using the specified method
 #'
 #'@author Elizabeth Wynn, \pkg{geesmv}-authors for underlying code used in small sample size variance estimators.
 #'
@@ -337,7 +336,6 @@ geeglm_small_samp<-function (formula,
   cov.var <- size/(size - 1) * kronecker(solve(step11), solve(step11)) %*%
     step14 %*% kronecker(solve(step11), solve(step11))
   gee.fit$small.samp.var<-diag(cov.beta)
-  gee.fit$small.samp.cov.var<-cov.var
   names(gee.fit$small.samp.var)<-names(gee.fit$coefficients)
   }
   gee.fit$call<-call

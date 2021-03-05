@@ -21,7 +21,7 @@ on the left of a ~ operator and the terms, separated by + operators, on the righ
 
 \item{family}{a description of the error distribution and link
 function to be used in the model. Only \code{guassian} and \code{poisson}
-families supported.}
+families are supported.}
 
 \item{data}{an optional data frame, list or environment (or object coercible by as.data.frame to a data frame)
 containing the variables in the model and the id variable. If not
@@ -38,20 +38,18 @@ this issue.}
 \item{corstr}{a character string specifying the correlation structure. The following are permitted: "independence", "exchangeable", "ar1", and "unstructured"}
 
 \item{small.samp.method}{a character string specifying the
-small sample method. The following are permitted: "pan" for the
-Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
+small sample method. The following are permitted: \code{"pan"} for the
+Pan (2001) method, \code{"md"} for the Mancl and Derouen (2001) method, and \code{"wl"} for the Wang and Long (2011) method.
 If \code{small.samp.method} is null, small sample variance estimates are not computed.
 The resulting object will be identical to the object created if
 \code{geeglm} from the \pkg{geepack}-package was used.}
 
 \item{...}{additional arguments passed on to \code{geepack::geeglm}.}
+
+\item{small.samp.var}{small sample variance estimators using the specified method}
 }
 \value{
-A \code{geeglm} object with two additional items:
-\enumerate{
-\item \code{small.samp.var} which contains the small sample variance estimators using the specified method and 2)
-\code{small.samp.cov.var} which contains the variance-covariance matrix for the variance estimator.
-}
+This function returns a \code{geeglm} object with one additional items:
 }
 \description{
 This function fits a GEE model using the \code{geeglm} function

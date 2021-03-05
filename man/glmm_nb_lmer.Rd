@@ -8,8 +8,6 @@ glmm_nb_lmer(
   formula,
   data,
   niter = 40,
-  niter_theta = 5,
-  niter_theta.ml = 5,
   epsilon = 1e-08,
   verbose = TRUE,
   REML = TRUE
@@ -22,6 +20,8 @@ glmm_nb_lmer(
 
 \item{niter}{Maximum number of iterations.}
 
+\item{epsilon}{Positive convergence tolerance.}
+
 \item{verbose}{Logical. Should the number of iterations and computational time be printed?}
 
 \item{REML}{Logical. Should the models be fit with REML or regular ML?}
@@ -30,14 +30,14 @@ glmm_nb_lmer(
 An object of class \code{\link{glmm_nb_mod}}
 }
 \description{
-This function to fits a generalized linear mixed model using a
-Psuedo-Likelihood approach
+This function to fits a negative binomial mixed model using a
+psuedo-likelihood approach
 }
 \details{
 This function is similar to the function \code{\link[NBZIMM]{glmm.nb}}
-from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest}
-than \pkg{nlme} and returns and object compatible with the \pkg{pkrtest} package
-which allows for the calculation of Kenward-Roger degrees of freedom
+from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest} package
+rather than \pkg{nlme} package and returns and object compatible with the \pkg{pkrtest} package
+which allows for the calculation of Kenward-Roger degrees of freedom.
 (see \code{\link[pbkrtest]{krmodcomp}},
 \code{\link[lmerTest]{contest.lmerModLmerTest}})
 }
