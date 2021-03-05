@@ -47,8 +47,11 @@ The resulting object will be identical to the object created if
 \item{...}{additional arguments passed on to \code{geepack::geeglm}.}
 }
 \value{
-A \code{geeglm} object with an additional item
-\code{small.samp.var} which contains the small sample variance estimators using the specified method.
+A \code{geeglm} object with two additional items:
+\enumerate{
+\item \code{small.samp.var} which contains the small sample variance estimators using the specified method and 2)
+\code{small.samp.cov.var} which contains the variance-covariance matrix for the variance estimator.
+}
 }
 \description{
 This function fits a GEE model using the \code{geeglm} function

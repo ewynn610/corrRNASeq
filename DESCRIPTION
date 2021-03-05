@@ -2,15 +2,16 @@ Package: corrRNASeq
 Title: Model Fitting for Correlated RNA-Seq Count Data
 Version: 0.0.0.9000
 Imports: 
-  lme4,
-  lmerTest,
-  MASS, 
-  Matrix,
-  pbkrtest,
-  methods,
-  geepack,
-  geesmv
-Depends: pbkrtest
+    lme4,
+    lmerTest,
+    MASS,
+    Matrix,
+    pbkrtest,
+    methods,
+    geepack,
+    geesmv,
+    lmerSeq
+Depends: pbkrtest, lmerSeq
 Authors@R: 
     person(given = "Elizabeth",
            family = "Wynn",

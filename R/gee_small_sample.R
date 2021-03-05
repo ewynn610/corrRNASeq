@@ -38,8 +38,9 @@
 #' @param ... additional arguments passed on to \code{geepack::geeglm}.
 #'
 #' @import geepack geesmv
-#' @return A \code{geeglm} object with an additional item
-#' \code{small.samp.var} which contains the small sample variance estimators using the specified method.
+#' @return A \code{geeglm} object with two additional items:
+#' 1) \code{small.samp.var} which contains the small sample variance estimators using the specified method and 2)
+#' \code{small.samp.cov.var} which contains the variance-covariance matrix for the variance estimator.
 #'
 #'@author Elizabeth Wynn, \pkg{geesmv}-authors for underlying code used in small sample size variance estimators.
 #'
@@ -336,6 +337,7 @@ geeglm_small_samp<-function (formula,
   cov.var <- size/(size - 1) * kronecker(solve(step11), solve(step11)) %*%
     step14 %*% kronecker(solve(step11), solve(step11))
   gee.fit$small.samp.var<-diag(cov.beta)
+  gee.fit$small.samp.cov.var<-cov.var
   names(gee.fit$small.samp.var)<-names(gee.fit$coefficients)
   }
   gee.fit$call<-call
