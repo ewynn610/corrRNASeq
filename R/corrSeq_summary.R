@@ -1,10 +1,10 @@
 #' Function to summarize individual regression coefficients
 #'
-#' Conducts t-tests on individual regression coefficients from models fit using \code{\link{corrSeq_fit}}.
+#' Conducts t-tests on individual regression coefficients from models fit from the \code{\link{corrSeq_fit}} function.
 #'
 #' @param corrSeq_results Results object from running \code{\link{corrSeq_fit}}.
 #' @param coefficient Character string or numeric indicator of which coefficient to summarize
-#' @param p_adj_method Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}.
+#' @param p_adj_method Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}}.
 #' @param ddf Method for computing degrees of freedom and t-statistics.
 #' The options "Satterthwaite" and "Kenward-Roger" can only be used for
 #' models fit using nbmm_pl or lmm. Options "containment" and
@@ -12,12 +12,15 @@
 #' @param sort_results Should the results table be sorted by adjusted p-value?
 #'
 #' @return This function returns a list object with the following components:
-#' @param coefficient Name of the coefficient being summarized.
-#' @param summary_table A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.
-#' @param ddf Method for computing the degrees of freedom.
-#' @param p_adj_method Method for adjusting the raw p-values.
-#' @param singular_fits Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.
-#' @param method Method used to fit the models.
+#'
+#' \item{coefficient}{Name of the coefficient being summarized.}
+#' \item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
+#' \item{ddf}{Method for computing the degrees of freedom.}
+#' \item{p_adj_method}{Method for adjusting the raw p-values.}
+#' \item{singular_fits}{Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.}
+#' \item{method}{Method used to fit the models.}
+#'
+#'
 #'@author Elizabeth Wynn
 #'
 #' @seealso \code{\link{corrSeq_fit}} \code{\link{geeglm_small_samp}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link[glmmADMB]{glmmadmb}}
@@ -69,7 +72,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     if(ddf!=ddf2){
       if(!is.numeric(ddf)){
         idx_non_null_1<-which(sapply(corrSeq_results, function(x) !is.null(x$fit)))[1]
-        ddf=calc_ddf(corrSeq_results[[idx_non_null]], ddf = ddf, method=method)
+        ddf=calc_ddf(corrSeq_results[[idx_non_null_1]], ddf = ddf, method=method)
       }
       ret2$summary_table<-ret2$summary_table%>%dplyr::mutate(df=ifelse(is.na(df), NA, ddf), p_val_raw=2*pt(-abs(t.value),df=df),
                                                       p_val_adj=p.adjust(p_val_raw,
@@ -154,13 +157,16 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         #Estimate and std. error for gee
         if(method=="gee"){
           Estimate=x$coefficients[coefficient]
-          Std.Error=sqrt(x$small.samp.var[coefficient])
+          #if small sample method was used
+          if(!is.null(x$small.samp.va)){
+            Std.Error=sqrt(x$small.samp.var[coefficient])
+          }else Std.Error=summary(x)$coefficients[coefficient,"Std.err"]
         }else if(method=="nbmm_pl"){
           Estimate=summary(x)$coefficients[coefficient,"Estimate"]
           Std.Error=summary(x)$coefficients[coefficient,"Std. Error"]
         }else if(method=="nbmm_ml"){
-          Estimate=summary(model)$coefficient[coefficient, "Estimate"]
-          Std.Error=summary(model)$coefficient[coefficient, "Std. Error"]
+          Estimate=summary(x)$coefficient[coefficient, "Estimate"]
+          Std.Error=summary(x)$coefficient[coefficient, "Std. Error"]
         }
         if(!is.numeric(ddf)){
           ddf=calc_ddf(model=x, ddf=ddf, method=method)
@@ -171,7 +177,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 
         data.frame(Estimate=Estimate, Std.Error=Std.Error, df=ddf,
                    t.value=t.value, p_val_raw=p_val_raw)
-      })%>%bind_rows()%>%
+      })%>%dplyr::bind_rows()%>%
         dplyr::mutate(Gene=gene_names[idx_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))%>%
         dplyr::select(Gene, Estimate, Std.Error, df, t.value, p_val_raw, p_val_adj)
 

@@ -45,11 +45,10 @@ The resulting object will be identical to the object created if
 \code{geeglm} from the \pkg{geepack}-package was used.}
 
 \item{...}{additional arguments passed on to \code{geepack::geeglm}.}
-
-\item{small.samp.var}{small sample variance estimators using the specified method}
 }
 \value{
 This function returns a \code{geeglm} object with one additional items:
+\item{small.samp.var}{small sample variance estimators using the specified method}
 }
 \description{
 This function fits a GEE model using the \code{geeglm} function

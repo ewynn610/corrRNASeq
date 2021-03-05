@@ -26,11 +26,13 @@
 #' @param ... additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
 #' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"})
 #'
-#' @return A list of model objects of length G.
+#' @return A list of length G of model objects from the following functions: \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
+#' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"}).
+#'
 #'
 #' @author Elizabeth Wynn
 #'
-#' @seealso \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link{gee_small_sample}} and \code{\link[glmmADMB]{glmmadmb}}
+#' @seealso \code{\link{corrSeq_summary}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link{gee_small_sample}} and \code{\link[glmmADMB]{glmmadmb}}
 #'
 #' @examples
 #' data("simdata")

@@ -39,7 +39,8 @@
 #'
 #' @import geepack geesmv
 #' @return This function returns a \code{geeglm} object with one additional items:
-#' @param small.samp.var small sample variance estimators using the specified method
+#' \item{small.samp.var}{small sample variance estimators using the specified method}
+#'
 #'
 #'@author Elizabeth Wynn, \pkg{geesmv}-authors for underlying code used in small sample size variance estimators.
 #'

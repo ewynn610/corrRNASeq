@@ -15,25 +15,29 @@ corrSeq_summary(
 \arguments{
 \item{corrSeq_results}{Results object from running \code{\link{corrSeq_fit}}.}
 
-\item{coefficient}{Name of the coefficient being summarized.}
+\item{coefficient}{Character string or numeric indicator of which coefficient to summarize}
 
-\item{p_adj_method}{Method for adjusting the raw p-values.}
+\item{p_adj_method}{Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}}.}
 
-\item{ddf}{Method for computing the degrees of freedom.}
+\item{ddf}{Method for computing degrees of freedom and t-statistics.
+The options "Satterthwaite" and "Kenward-Roger" can only be used for
+models fit using nbmm_pl or lmm. Options "containment" and
+"residual" can be used for models fit using any method. Alternatively, a single numeric value representing the ddf for all tests can also be given.}
 
 \item{sort_results}{Should the results table be sorted by adjusted p-value?}
-
-\item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
-
-\item{singular_fits}{Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.}
-
-\item{method}{Method used to fit the models.}
 }
 \value{
 This function returns a list object with the following components:
+
+\item{coefficient}{Name of the coefficient being summarized.}
+\item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
+\item{ddf}{Method for computing the degrees of freedom.}
+\item{p_adj_method}{Method for adjusting the raw p-values.}
+\item{singular_fits}{Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.}
+\item{method}{Method used to fit the models.}
 }
 \description{
-Conducts t-tests on individual regression coefficients from models fit using \code{\link{corrSeq_fit}}.
+Conducts t-tests on individual regression coefficients from models fit from the \code{\link{corrSeq_fit}} function.
 }
 \examples{
 data("simdata")

@@ -51,7 +51,8 @@ The resulting object will be identical to the object created if
 \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"})}
 }
 \value{
-A list of model objects of length G.
+A list of length G of model objects from the following functions: \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
+\code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"}).
 }
 \description{
 Wrapper function that fits one of four types of models to RNA-Seq data. Available model fitting methods are linear mixed models (lmm) (using transformed data), generalized estimating equations with an optional small sample adjustment (gee), and negative binomial models using either
@@ -102,7 +103,7 @@ lmm_fit<- corrSeq_fit(formula = ~ group * time + (1|ids),
                            method="lmm")
 }
 \seealso{
-\code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link{gee_small_sample}} and \code{\link[glmmADMB]{glmmadmb}}
+\code{\link{corrSeq_summary}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link{gee_small_sample}} and \code{\link[glmmADMB]{glmmadmb}}
 }
 \author{
 Elizabeth Wynn
