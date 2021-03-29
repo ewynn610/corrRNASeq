@@ -197,7 +197,6 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
                  ddf = match.call()$ddf,
                  p_adj_method = p_adj_method)
     if(method !="gee"){
-      browser()
       genes_singular_fits <- as.character(gene_names[idx_singular])
       ret2$singular_fits = genes_singular_fits
       ret2$summary_table$Gene<-as.character(ret2$summary_table$Gene)
