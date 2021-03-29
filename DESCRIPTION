@@ -10,7 +10,8 @@ Imports:
     methods,
     geepack,
     geesmv,
-    lmerSeq
+    lmerSeq,
+    glmmADMB
 Depends: pbkrtest, lmerSeq
 Remotes: stop-pre16/lmerSeq
 Authors@R: 
