@@ -47,10 +47,12 @@ sample_meta_data <- simdata$metadata
 counts=simdata$counts[1:10,]
 
 ## Fit NBMM-PL models
-nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids),
-                          expr_mat = counts,
-                          sample_data = sample_meta_data,
-                          method="nbmm_pl")
+## Use log(library size) as an offset
+nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+                           expr_mat = counts,
+                           sample_data = sample_meta_data,
+                           method="nbmm_pl")
+
 
 ## Summarize the group coefficient with Satterthwaite degrees of freedom
 model_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,

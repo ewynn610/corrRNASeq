@@ -33,10 +33,12 @@
 #
 #'
 #' ## Fit NBMM-PL models
-#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids),
-#'                           expr_mat = counts,
-#'                           sample_data = sample_meta_data,
-#'                           method="nbmm_pl")
+#' ## Use log(library size) as an offset
+#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+#'                            expr_mat = counts,
+#'                            sample_data = sample_meta_data,
+#'                            method="nbmm_pl")
+#'
 #'
 #' ## Summarize the group coefficient with Satterthwaite degrees of freedom
 #' model_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
@@ -195,8 +197,10 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
                  ddf = match.call()$ddf,
                  p_adj_method = p_adj_method)
     if(method !="gee"){
-      genes_singular_fits <- gene_names[idx_singular]
+      browser()
+      genes_singular_fits <- as.character(gene_names[idx_singular])
       ret2$singular_fits = genes_singular_fits
+      ret2$summary_table$Gene<-as.character(ret2$summary_table$Gene)
       ret2$summary_table <- gtools::smartbind(ret2$summary_table, data.frame(Gene = genes_singular_fits))
 
     }

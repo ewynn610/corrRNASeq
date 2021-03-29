@@ -7,8 +7,8 @@
 \format{
 A list with 2 named objects:
 \describe{
-\item{counts}{gene expression values}
-\item{metadata}{data frame with variables for group, time, and subject ID.  Rows are in the same order as columns of counts}
+\item{counts}{Gene expression values.}
+\item{metadata}{Data frame with variables for group, time, and subject ID.  Library size (column sums for the counts matrix) are also provided. Rows are in the same order as columns of counts.}
 }
 }
 \usage{

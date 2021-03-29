@@ -12,6 +12,7 @@ Imports:
     geesmv,
     lmerSeq
 Depends: pbkrtest, lmerSeq
+Remotes: stop-pre16/lmerSeq
 Authors@R: 
     person(given = "Elizabeth",
            family = "Wynn",

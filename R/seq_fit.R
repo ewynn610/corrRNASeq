@@ -42,7 +42,8 @@
 #' counts=simdata$counts[1:10,]
 #'
 #' ## Fit GEE models using Wang-Long small sample size estimator
-#' gee_fit <- corrSeq_fit(formula = ~ group * time,
+#' ## Use log(library size) as an offset
+#' gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log(lib_size)),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="gee",
@@ -50,17 +51,21 @@
 #'                            small.samp.method="wl")
 #'
 #' ## Fit NBMM-PL models
-#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids),
+#' ## Use log(library size) as an offset
+#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_pl")
+#'
 #' ## Fit NBMM-ML models
 #' ## Random effects must be factors
+#' ## Use log(library size) as an offset
 #' sample_meta_data$ids<-factor(sample_meta_data$ids)
-#' nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids),
+#' nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_ml")
+#'
 #' ## Fit LMM models to transformed data
 #' ## Read in expression data from lmerSeq package
 #' data("expr_data")
@@ -202,7 +207,3 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
 
 
 
-#Questions
-#Include all arguments or just necessary?
-#Give choice on glmmadmb family, etc?
-#errors within try catch?

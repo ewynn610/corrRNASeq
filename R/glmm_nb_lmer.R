@@ -102,6 +102,7 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
 
   # Which term is the offset?
   off <- attr(Terms, "offset")
+  off_name<-all.vars(fixed)[off]
 
   # If there is an offset, then it's saving on offset variable name
   if (length(off <- attr(Terms, "offset")))
@@ -110,7 +111,7 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
 
   #Save formula for output later
   Call$formula<-formula
-  m$formula <- as.formula(paste(allvars[1],"~", paste(allvars[-c(1,off)], collapse = "+")))
+  m$formula <- as.formula(paste(allvars[1],"~", paste(allvars[-c(1)], collapse = "+")))
 
   #Make sure m$formula environment the fixed environment (don't know why that's necessary)
   environment(m$formula) <- environment(fixed)
