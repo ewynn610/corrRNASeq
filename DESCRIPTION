@@ -11,7 +11,14 @@ Imports:
     geepack,
     geesmv,
     lmerSeq,
-    glmmADMB
+    glmmADMB,
+    pbapply,
+    parallel,
+    stringr,
+    dplyr,
+    gtools,
+    stats,
+    matrixcalc
 Depends: pbkrtest, lmerSeq
 Remotes: stop-pre16/lmerSeq
 Authors@R: 
