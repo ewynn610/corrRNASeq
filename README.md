@@ -25,4 +25,4 @@ devtools::install_github("ewynn610/corrRNASeq", build_vignettes = T)
 
 To read the detailed vignette with an example analysis, run:
 
-vignette("")
+vignette("vignette("corrRNASeq-vignette")")
