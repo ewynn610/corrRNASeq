@@ -3,27 +3,25 @@
 #' Wrapper function that fits one of four types of models to RNA-Seq data. Available model fitting methods are linear mixed models (lmm) (using transformed data), generalized estimating equations with an optional small sample adjustment (gee), and negative binomial models using either
 #' a pseudo-likelhood approach (nbmm_pl) or a maximum likelihood approach (nbmm_ml).
 #'
-#' @param formula A one-sided linear formula describing both the model effects of the model. For \code{"method=lmm"}, \code{"method=nbmm_pl"} and \code{"method=nbmm_ml"}, random effects should be included in the formula using the syntax of the lme4 package.
-#' @param expr_mat A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{"method=gee"}, \code{"method=nbmm_pl"} and \code{"method=nbmm_ml"}, the matrix should contain raw counts and for \code{"method=lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.
+#' @param formula A one-sided linear formula describing the model effects of the model. For \code{method="lmm"}, \code{method="nbmm_pl"} and \code{method="nbmm_ml"}, random effects should be included in the formula using the syntax of the lme4 package.
+#' @param expr_mat A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{method="gee"}, \code{method="nbmm_pl"} and \code{method="nbmm_ml"}, the matrix should contain raw counts and for \code{method="lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.
 #' @param gene_names An optional character vector of gene names (length G).
 #' @param sample_data Data frame with N rows containing the fixed- and random-effects terms included in the formula.  The rows of the data frame must correspond (and be in the same order as) the columns of the expression matrix.
 #' @param method Method to use to fit the models. Possible options are \code{"lmm"}, \code{"gee"}, \code{"nbmm_pl"} and \code{"nbmm_ml"}.
 #' @param parallel If on Mac or linux, use forking (via mclapply) to parallelize fits
-#' @param id Only applicable for models fit using the \code{"method=gee"} method. A vector or data column name which identifies the clusters. The length of
+#' @param id Only applicable for models fit using the \code{method="gee"} method. A vector or data column name which identifies the clusters. The length of
 #' ‘id’ should be the same as the number of observations. Data are
 #' assumed to be sorted so that observations on each cluster appear
 #' as contiguous rows in data. If data is not sorted this way, the
 #' function will not identify the clusters correctly. If \code{sort=TRUE} (default),
 #' the dataframe from the \code{data} argument is sorted by the id column to avoid
 #' this issue.
-#' @param small.samp.method Only applicable for models fit using the \code{"method=gee"} method. A character string specifying the
+#' @param small.samp.method Only applicable for models fit using the \code{method="gee"} method. A character string specifying the
 #' small sample method. The following are permitted: "pan" for the
 #' Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
 #' If \code{small.samp.method} is null, small sample variance estimates are not computed.
-#' The resulting object will be identical to the object created if
-#' \code{geeglm} from the \pkg{geepack}-package was used.
 #' @param cores Number of cores to use (default is 2)
-#' @param ... additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
+#' @param ... additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="gee"}),
 #' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"})
 #'
 #' @return A list of length G of model objects from the following functions: \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
@@ -67,15 +65,9 @@
 #'                            method="nbmm_ml")
 #'
 #' ## Fit LMM models to transformed data
-#' ## Read in expression data from lmerSeq package
-#' data("expr_data")
-#'
-#' ## Transformed data (VST transformation from \code{DESeq2})
-#' vst_expr <- expr_example$vst_expr
-#' sample_meta_data <- expr_example$sample_meta_data
-#'
-#' ##  Only including 10 genes in the expression matrix
-#' vst_expr <- vst_expr[1:10, ]
+#' ## Use the variance transformed counts in the simdata object
+#' ## Subset down to 10 genes
+#' vst_expr<-simdata$simdata$vst_expr[1:10,]
 #'
 #' ##  Fit the Models
 #' lmm_fit<- corrSeq_fit(formula = ~ group * time + (1|ids),
@@ -91,7 +83,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                         sample_data = NULL, # A data frame with sample meta data
                         method,
                         id,
-                        small.samp.method="wl",
+                        small.samp.method=NULL,
                         parallel = F,
                         cores = 2, ...
 ){
@@ -175,7 +167,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                FUN = function(i){
                                  dat_sub <- cbind(sample_data, data.frame(expr = as.numeric(expr_mat[i, ])))
                                  ret_sub <- tryCatch({
-                                   tmp1 <- suppressMessages(do.call(method_call, args))
+                                   tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                  }, error = function(e) {
                                    ret_sub2 <- NULL
                                  })
@@ -191,11 +183,13 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                 FUN = function(i){
                                   dat_sub <- cbind(sample_data, data.frame(expr = as.numeric(expr_mat[i, ])))
                                   ret_sub <- tryCatch({
-                                    tmp1 <- suppressMessages(do.call(method_call, args))
+                                    tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                   }, error = function(e) {
                                     ret_sub2 <- NULL
                                   })
                                   ret2 <- ret_sub
+                                  if(method=="nbmm_ml"&!is.null(ret2)) ret2$data=dat_sub
+                                  ret2
                                 })
     }
   }

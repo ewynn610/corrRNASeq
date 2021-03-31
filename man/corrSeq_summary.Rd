@@ -8,7 +8,7 @@ corrSeq_summary(
   corrSeq_results = NULL,
   coefficient = NULL,
   p_adj_method = "BH",
-  ddf = "Satterthwaite",
+  df = "Satterthwaite",
   sort_results = T
 )
 }
@@ -19,10 +19,10 @@ corrSeq_summary(
 
 \item{p_adj_method}{Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}}.}
 
-\item{ddf}{Method for computing degrees of freedom and t-statistics.
+\item{df}{Method for computing degrees of freedom and t-statistics.
 The options "Satterthwaite" and "Kenward-Roger" can only be used for
 models fit using nbmm_pl or lmm. Options "containment" and
-"residual" can be used for models fit using any method. Alternatively, a single numeric value representing the ddf for all tests can also be given.}
+"residual" can be used for models fit using any method. Alternatively, a single numeric value representing the df for all tests can also be given.}
 
 \item{sort_results}{Should the results table be sorted by adjusted p-value?}
 }
@@ -31,7 +31,7 @@ This function returns a list object with the following components:
 
 \item{coefficient}{Name of the coefficient being summarized.}
 \item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
-\item{ddf}{Method for computing the degrees of freedom.}
+\item{df}{Method for computing the degrees of freedom.}
 \item{p_adj_method}{Method for adjusting the raw p-values.}
 \item{singular_fits}{Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.}
 \item{method}{Method used to fit the models.}
@@ -58,7 +58,7 @@ nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)
 model_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
                              coefficient = "group",
                              p_adj_method = 'BH',
-                             ddf = 'Satterthwaite',
+                             df = 'Satterthwaite',
                              sort_results = T)
 
 

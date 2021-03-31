@@ -9,7 +9,7 @@ glmm_nb_lmer(
   data,
   niter = 40,
   epsilon = 1e-08,
-  verbose = TRUE,
+  verbose = FALSE,
   REML = TRUE
 )
 }

@@ -11,16 +11,16 @@ corrSeq_fit(
   sample_data = NULL,
   method,
   id,
-  small.samp.method = "wl",
+  small.samp.method = NULL,
   parallel = F,
   cores = 2,
   ...
 )
 }
 \arguments{
-\item{formula}{A one-sided linear formula describing both the model effects of the model. For \code{"method=lmm"}, \code{"method=nbmm_pl"} and \code{"method=nbmm_ml"}, random effects should be included in the formula using the syntax of the lme4 package.}
+\item{formula}{A one-sided linear formula describing the model effects of the model. For \code{method="lmm"}, \code{method="nbmm_pl"} and \code{method="nbmm_ml"}, random effects should be included in the formula using the syntax of the lme4 package.}
 
-\item{expr_mat}{A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{"method=gee"}, \code{"method=nbmm_pl"} and \code{"method=nbmm_ml"}, the matrix should contain raw counts and for \code{"method=lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.}
+\item{expr_mat}{A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{method="gee"}, \code{method="nbmm_pl"} and \code{method="nbmm_ml"}, the matrix should contain raw counts and for \code{method="lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.}
 
 \item{gene_names}{An optional character vector of gene names (length G).}
 
@@ -28,7 +28,7 @@ corrSeq_fit(
 
 \item{method}{Method to use to fit the models. Possible options are \code{"lmm"}, \code{"gee"}, \code{"nbmm_pl"} and \code{"nbmm_ml"}.}
 
-\item{id}{Only applicable for models fit using the \code{"method=gee"} method. A vector or data column name which identifies the clusters. The length of
+\item{id}{Only applicable for models fit using the \code{method="gee"} method. A vector or data column name which identifies the clusters. The length of
 ‘id’ should be the same as the number of observations. Data are
 assumed to be sorted so that observations on each cluster appear
 as contiguous rows in data. If data is not sorted this way, the
@@ -36,18 +36,16 @@ function will not identify the clusters correctly. If \code{sort=TRUE} (default)
 the dataframe from the \code{data} argument is sorted by the id column to avoid
 this issue.}
 
-\item{small.samp.method}{Only applicable for models fit using the \code{"method=gee"} method. A character string specifying the
+\item{small.samp.method}{Only applicable for models fit using the \code{method="gee"} method. A character string specifying the
 small sample method. The following are permitted: "pan" for the
 Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
-If \code{small.samp.method} is null, small sample variance estimates are not computed.
-The resulting object will be identical to the object created if
-\code{geeglm} from the \pkg{geepack}-package was used.}
+If \code{small.samp.method} is null, small sample variance estimates are not computed.}
 
 \item{parallel}{If on Mac or linux, use forking (via mclapply) to parallelize fits}
 
 \item{cores}{Number of cores to use (default is 2)}
 
-\item{...}{additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
+\item{...}{additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="gee"}),
 \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"})}
 }
 \value{
@@ -91,15 +89,9 @@ nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)
                            method="nbmm_ml")
 
 ## Fit LMM models to transformed data
-## Read in expression data from lmerSeq package
-data("expr_data")
-
-## Transformed data (VST transformation from \code{DESeq2})
-vst_expr <- expr_example$vst_expr
-sample_meta_data <- expr_example$sample_meta_data
-
-##  Only including 10 genes in the expression matrix
-vst_expr <- vst_expr[1:10, ]
+## Use the variance transformed counts in the simdata object
+## Subset down to 10 genes
+vst_expr<-simdata$simdata$vst_expr[1:10,]
 
 ##  Fit the Models
 lmm_fit<- corrSeq_fit(formula = ~ group * time + (1|ids),

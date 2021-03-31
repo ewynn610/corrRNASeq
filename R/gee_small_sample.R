@@ -84,7 +84,7 @@ geeglm_small_samp<-function (formula,
                              data,
                              id,
                              corstr = "exchangeable",
-                             small.samp.method="wl",
+                             small.samp.method=NULL,
                              sort=T,
                              ...)
 {

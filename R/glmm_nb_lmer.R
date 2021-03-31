@@ -24,7 +24,7 @@
 #'
 
 glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
-                      slots=c(dispersion="numeric", iter="numeric"))
+                      slots=c(dispersion="numeric", iter="numeric", converged="logical"))
 
 
 
@@ -76,7 +76,7 @@ glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
 #'
 
 
-glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TRUE, REML=TRUE){
+glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = FALSE, REML=TRUE){
   niter_theta=5
   niter_theta.ml = 5
   start.time <- Sys.time()
@@ -137,7 +137,7 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
   mf$wts <- wts
 
   #Fit initial model
-  fit0<-MASS::glm.nb(formula = fixed, data=mf)
+  fit0<-suppressWarnings(MASS::glm.nb(formula = fixed, data=mf))
 
   # Saving prior weights and linear predictors from model
   w <- fit0$prior.weights
@@ -190,7 +190,7 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
   # for loop goes set number of iterations (specified in the call)
   for (i in seq_len(niter)) {
     #Evaluate function created from above info
-    fit <- eval(mcall)
+    fit <- suppressMessages(eval(mcall))
 
     Z <- t(as.matrix(attributes(fit)$pp$Zt))
     X <- model.matrix(fit)
@@ -286,13 +286,13 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
     # update data (since zz changed)
     mcall$data <- mf
   }
-  if (!(sum((eta - etaold)^2) < epsilon * sum(eta^2) & abs((th_old-th)^2)<epsilon*th^2)) warning("Model did not converge")
+  converged=T
+  if (!(sum((eta - etaold)^2) < epsilon * sum(eta^2) & abs((th_old-th)^2)<epsilon*th^2)){
+    warning("Model did not converge")
+    converged=F
+  }
 
-  # None of these lines would work with lmer (because no list names?)
-  # CMM - lmer objects are funny.  You have to use attributes(fit).  See my examples below.
-  #get rid of loglik info (no list item names in lmerTest so won't work)
-  ###attributes(fit$logLik) <- NULL
-
+  fit<-as(fit, "glmm_nb_mod")
   #fit$call outputs model formula
   attributes(fit)$call <- Call #CMM
 
@@ -304,8 +304,9 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
 
   #save theta value
   attributes(fit)$dispersion <- fam$theta #CMM
-  #nbmm as old class fit?
-  ###oldClass(fit) <- c("nbmm", oldClass(fit))
+
+  #Save convergence information
+  attributes(fit)$converged<-converged
 
   stop.time <- Sys.time()
   minutes <- round(difftime(stop.time, start.time, units = "min"), 3)
@@ -316,7 +317,6 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = TR
   }
 
   #returns fitted model
-  fit<-as(fit, "glmm_nb_mod")
   fit
 
 }
