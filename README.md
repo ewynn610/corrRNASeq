@@ -13,6 +13,7 @@ devtools::install_github("stop-pre16/lmerSeq", build_vignettes = T)
 Next, the glmmADMB package needs to be installed (see https://glmmadmb.r-forge.r-project.org/ for more information):
 
 install.packages("R2admb")
+
 install.packages("glmmADMB", 
     repos=c("http://glmmadmb.r-forge.r-project.org/repos",
             getOption("repos")),
