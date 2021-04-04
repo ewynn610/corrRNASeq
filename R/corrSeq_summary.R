@@ -84,7 +84,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 
   }else{
     #Check if models are Null
-    if( sum(sapply(corrSeq_results, is.null))){
+    if( sum(sapply(corrSeq_results, function(x) !(is.null(x))))==0){
       stop("Model fits for all genes are null")
     }
     #Get first non-null model
