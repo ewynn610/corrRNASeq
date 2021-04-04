@@ -96,22 +96,24 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       coef_names <- names(corrSeq_results[[idx_non_null_1]]$coefficients)
       #df methods for gee
       df_methods=c("containment", "residual")
-      idx_converged_not_singular=1:length(corrSeq_results)
+      idx_not_converged<-which(sapply(corrSeq_results, is.null))
+      idx_converged_not_singular=which(!(1:length(corrSeq_results)%in% idx_not_converged))
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmm_nb_mod"){
       method="nbmm_pl"
       coef_names<-names(lme4::fixef(corrSeq_results[[idx_non_null_1]]))
       df_methods=c("containment", "residual", "Satterthwaite", "Kenward-Roger")
       idx_singular<-which(sapply(corrSeq_results, lme4::isSingular))
-      idx_not_converged<-which(sapply(corrSeq_results, function(x) x@converged==F))
-      idx_converged_not_singular <- which(!sapply(corrSeq_results, lme4::isSingular))
+      idx_not_converged<-which(sapply(corrSeq_results, function(x) if(!is.null(x)) x@converged==F else T))
+      idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmmadmb"){
       method="nbmm_ml"
       coef_names=names(coef(corrSeq_results[[idx_non_null_1]]))
+      idx_not_converged<-which(sapply(corrSeq_results, is.null))
       idx_singular<-which(sapply(corrSeq_results, function(x){
         any(sapply(x$S, function(x) any(diag(x)<1e-05)))
       })
       )
-      idx_converged_not_singular<-which(!(1:length(corrSeq_results)%in% idx_singular))
+      idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
       df_methods=c("containment", "residual")
     }
 
@@ -202,14 +204,11 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
                  p_adj_method = p_adj_method)
     if(method !="gee"){
       genes_singular_fits <- as.character(gene_names[idx_singular])
-      if(method=="nbmm_pl"){
-        genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
-      }else genes_null=genes_singular_fits
+      genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
       ret2$singular_fits = genes_singular_fits
-      ret2$summary_table$Gene<-as.character(ret2$summary_table$Gene)
-      ret2$summary_table <- gtools::smartbind(ret2$summary_table, data.frame(Gene = genes_null))
-
-    }
+    }else genes_null=as.character(gene_names[idx_not_converged])
+    ret2$summary_table$Gene<-as.character(ret2$summary_table$Gene)
+    ret2$summary_table <- gtools::smartbind(ret2$summary_table, data.frame(Gene = genes_null))
   }
   ret2$model_method=method
   rownames(ret2$summary_table)<-NULL
