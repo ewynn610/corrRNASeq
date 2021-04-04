@@ -57,6 +57,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
                             df = "residual", # Method for computing degrees of freedom and t-statistics. Options are "Satterthwaite" and "Kenward-Roger"
                             sort_results = T # Should the results table be sorted by adjusted p-value?
 ){
+  #Save df name in new variable (df is used to save values later)
+  df_name=df
+
   if(identical(names(corrSeq_results[[1]]),c("fit", "gene"))){
     method="lmm"
     df_methods=c("Satterthwaite", "Kenward-Roger", "containment", "residual")
@@ -79,7 +82,6 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       ret2$summary_table<-ret2$summary_table%>%dplyr::mutate(df=ifelse(is.na(df), NA, df), p_val_raw=2*pt(-abs(t.value),df=df),
                                                       p_val_adj=p.adjust(p_val_raw,
                                                                          method=p_adj_method))
-      ret2$df=match.call()$df
     }
 
   }else{
@@ -193,14 +195,12 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 
 
 
-    if(sort_results){
-      ret <- ret %>%
-        dplyr::arrange(p_val_adj)
-    }
+
+
+
     rownames(ret) <- NULL
     ret2 <- list(coefficient = coef_out,
                  summary_table = ret,
-                 df = match.call()$df,
                  p_adj_method = p_adj_method)
     if(method !="gee"){
       genes_singular_fits <- as.character(gene_names[idx_singular])
@@ -210,7 +210,14 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     ret2$summary_table$Gene<-as.character(ret2$summary_table$Gene)
     ret2$summary_table <- gtools::smartbind(ret2$summary_table, data.frame(Gene = genes_null))
   }
+  ret2$summary_table<-ret2$summary_table[match(gene_names,
+                                               ret2$summary_table$Gene),]
+  if(sort_results){
+    ret2$summary_table <- ret2$summary_table %>%
+      dplyr::arrange(p_val_adj)
+  }
   ret2$model_method=method
+  ret2$df=df_name
   rownames(ret2$summary_table)<-NULL
   return(ret2)
 }
