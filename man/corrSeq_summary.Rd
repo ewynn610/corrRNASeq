@@ -8,7 +8,7 @@ corrSeq_summary(
   corrSeq_results = NULL,
   coefficient = NULL,
   p_adj_method = "BH",
-  df = "Satterthwaite",
+  df = "residual",
   sort_results = T
 )
 }

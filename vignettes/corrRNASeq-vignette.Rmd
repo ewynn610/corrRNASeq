@@ -101,7 +101,7 @@ The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, wh
 | Option               | Description                                         | Default |
 | :---------------------- | :--------------------------------------------------- | :----------------|
 | p_adj_method        | Method for adjusting for multiple comparisons. See ```p.adjust.methods``` from the ```stats``` package. | ```"BH"```| 
-| df        | Degrees of freedom method for computing degrees of freedom and t-statistics. The options ```"Satterthwaite"``` and ```"Kenward-Roger"``` can only be used for models fit using ```"nbmm_pl"``` or ```"lmm"```. Options ```"containment"``` and ```"residual"``` can be used for models fit using any method. Alternatively, a single numeric value representing the df for all tests can also be given.| ```"Satterthwaite"``` |
+| df        | Degrees of freedom method for computing degrees of freedom and t-statistics. The options ```"Satterthwaite"``` and ```"Kenward-Roger"``` can only be used for models fit using ```"nbmm_pl"``` or ```"lmm"```. Options ```"containment"``` and ```"residual"``` can be used for models fit using any method. Alternatively, a single numeric value representing the df for all tests can also be given.| ```"residual"``` |
 | sort_results        |Should the results table be sorted by adjusted p-value? | ```TRUE```|
 
 ## An Example corrRNASeq Analysis

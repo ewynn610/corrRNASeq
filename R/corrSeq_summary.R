@@ -54,7 +54,7 @@
 corrSeq_summary <- function(corrSeq_results = NULL, # Results object from running lmerSeq.fit
                             coefficient = NULL, # Character string or numeric indicator of which coefficient to summarize
                             p_adj_method = "BH", # Method for adjusting for multiple comparisons (default is Benjamini-Hochberg)
-                            df = "Satterthwaite", # Method for computing degrees of freedom and t-statistics. Options are "Satterthwaite" and "Kenward-Roger"
+                            df = "residual", # Method for computing degrees of freedom and t-statistics. Options are "Satterthwaite" and "Kenward-Roger"
                             sort_results = T # Should the results table be sorted by adjusted p-value?
 ){
   if(identical(names(corrSeq_results[[1]]),c("fit", "gene"))){
@@ -107,8 +107,11 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmmadmb"){
       method="nbmm_ml"
       coef_names=names(coef(corrSeq_results[[idx_non_null_1]]))
-      idx_singular<-which(sapply(corrSeq_results, function(x) x$S$ids[1]<1e-05))
-      idx_converged_not_singular<-which(!sapply(corrSeq_results, function(x) x$S$ids[1]<1e-05))
+      idx_singular<-which(sapply(corrSeq_results, function(x){
+        any(sapply(x$S, function(x) any(diag(x)<1e-05)))
+      })
+      )
+      idx_converged_not_singular<-which(!(1:length(corrSeq_results)%in% idx_singular))
       df_methods=c("containment", "residual")
     }
 
