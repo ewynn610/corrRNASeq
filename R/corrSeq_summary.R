@@ -102,7 +102,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       method="nbmm_pl"
       coef_names<-names(lme4::fixef(corrSeq_results[[idx_non_null_1]]))
       df_methods=c("containment", "residual", "Satterthwaite", "Kenward-Roger")
-      idx_singular<-which(sapply(corrSeq_results, lme4::isSingular))
+      idx_singular<-which(sapply(corrSeq_results, function(x) if(is.null(x)) F else lme4::isSingular(x)))
       idx_not_converged<-which(sapply(corrSeq_results, function(x) if(!is.null(x)) x@converged==F else T))
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmmadmb"){
