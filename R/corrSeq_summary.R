@@ -69,7 +69,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     if(!(df %in% c("Satterthwaite", "Kenward-Roger"))) df2="Satterthwaite"
     ret2=lmerSeq.summary(corrSeq_results, coefficient = coefficient,
                          p_adj_method = p_adj_method,
-                         dff=df2, sort_results = sort_results)
+                         ddf=df2, sort_results = sort_results)
     #First non-null model
     if(df!=df2){
       if(!is.numeric(df)){
