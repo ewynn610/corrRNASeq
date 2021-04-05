@@ -60,6 +60,10 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
   #Save df name in new variable (df is used to save values later)
   df_name=df
 
+  #Get genenames (names from list)
+  gene_names <- names(corrSeq_results)
+
+
   if(identical(names(corrSeq_results[[1]]),c("fit", "gene"))){
     method="lmm"
     df_methods=c("Satterthwaite", "Kenward-Roger", "containment", "residual")
@@ -80,10 +84,13 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         df=calc_df(corrSeq_results[[idx_non_null_1]], df = df, method=method)
       }
       ret2$summary_table<-ret2$summary_table%>%dplyr::mutate(df=ifelse(is.na(df), NA, df), p_val_raw=2*pt(-abs(t.value),df=df),
-                                                      p_val_adj=p.adjust(p_val_raw,
-                                                                         method=p_adj_method))
+                                                             p_val_adj=p.adjust(p_val_raw,
+                                                                                method=p_adj_method))
     }
-
+    #Capitolize column name so it matches with others
+    colnames(ret2$summary_table)[colnames(ret2$summary_table)=="gene"]<-"Gene"
+    #get rid of ddf (artifact from lmerseq, gets added later)
+    ret2$ddf<-NULL
   }else{
     #Check if models are Null
     if( sum(sapply(corrSeq_results, function(x) !(is.null(x))))==0){
@@ -120,7 +127,6 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     }
 
 
-    gene_names <- names(corrSeq_results)
     ############################################################################################################
     #Error Messages for insufficient or inconsistent information
     ############################################################################################################
@@ -151,9 +157,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         res_sub <- summary(x, ddf = df)$coefficients[coefficient, ]
         return(res_sub)
       }))%>%data.frame()%>%dplyr::rename(p_val_raw ="Pr...t..")%>%dplyr::mutate(Gene=gene_names[idx_converged_not_singular],
-                                                                  p_val_adj = p.adjust(p_val_raw, method = p_adj_method))%>%
+                                                                                p_val_adj = p.adjust(p_val_raw, method = p_adj_method))%>%
         dplyr::select(Gene, Estimate, Std.Error="Std..Error", "df","t.value",
-               p_val_raw, p_val_adj)
+                      p_val_raw, p_val_adj)
 
 
     }else{
