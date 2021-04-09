@@ -81,9 +81,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     if(df!=df2){
       if(!is.numeric(df)){
         idx_non_null_1<-which(sapply(corrSeq_results, function(x) !is.null(x$fit)))[1]
-        df=calc_df(corrSeq_results[[idx_non_null_1]], df = df, method=method)
+        df_new=calc_df(corrSeq_results[[idx_non_null_1]], df = df, method=method)
       }
-      ret2$summary_table<-ret2$summary_table%>%dplyr::mutate(df=ifelse(is.na(df), NA, df), p_val_raw=2*pt(-abs(t.value),df=df),
+      ret2$summary_table<-ret2$summary_table%>%dplyr::mutate(df=ifelse(is.na(df), NA, df_new), p_val_raw=2*pt(-abs(t.value),df=df_new),
                                                              p_val_adj=p.adjust(p_val_raw,
                                                                                 method=p_adj_method))
     }

@@ -22,7 +22,7 @@
 #' containing the variables in the model and the id variable. If not
 #' environment(formula), typically the environment from which the function is called.
 #' @param id a vector or data column name which identifies the clusters. The length of
-#' ‘id’ should be the same as the number of observations. Data are
+#' id should be the same as the number of observations. Data are
 #' assumed to be sorted so that observations on each cluster appear
 #' as contiguous rows in data. If data is not sorted this way, the
 #' function will not identify the clusters correctly. If \code{sort=TRUE} (default),
@@ -100,13 +100,13 @@ geeglm_small_samp<-function (formula,
     data <- data[index, ]
     m <- model.frame(formula, data)
     mt <- attr(m, "terms")
-    data$response <- model.response(m, "numeric")
+    #data$response <- model.response(m, "numeric")
     mat <- as.data.frame(model.matrix(formula, m))
   }
   else {
     m <- model.frame(formula, data)
     mt <- attr(m, "terms")
-    data$response <- model.response(m, "numeric")
+    #data$response <- model.response(m, "numeric")
     mat <- as.data.frame(model.matrix(formula, m))
   }
   #################Make sure data is sorted################
