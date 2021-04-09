@@ -100,13 +100,13 @@ geeglm_small_samp<-function (formula,
     data <- data[index, ]
     m <- model.frame(formula, data)
     mt <- attr(m, "terms")
-    #data$response <- model.response(m, "numeric")
+    data$response <- model.response(m, "numeric")
     mat <- as.data.frame(model.matrix(formula, m))
   }
   else {
     m <- model.frame(formula, data)
     mt <- attr(m, "terms")
-    #data$response <- model.response(m, "numeric")
+    data$response <- model.response(m, "numeric")
     mat <- as.data.frame(model.matrix(formula, m))
   }
   #################Make sure data is sorted################
