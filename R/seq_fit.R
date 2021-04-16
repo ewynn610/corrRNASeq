@@ -183,7 +183,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
     }
     else{
       ret <- parallel::mclapply(X = 1:nrow(expr_mat),
-                                mc.silent = T,
+                                mc.silent = F,
                                 mc.cores = cores,
                                 FUN = function(i){
                                   print(paste("Gene",i))
