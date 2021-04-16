@@ -85,7 +85,8 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                         id,
                         small.samp.method=NULL,
                         parallel = F,
-                        cores = 2, ...
+                        cores = 2,
+                        ...
 ){
   if(method=="lmm"){
     # Gene Names
@@ -185,6 +186,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                 mc.silent = T,
                                 mc.cores = cores,
                                 FUN = function(i){
+                                  print(paste("Gene",i))
                                   dat_sub <- cbind(sample_data, data.frame(expr = as.numeric(expr_mat[i, ])))
                                   ret_sub <- tryCatch({
                                     tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
