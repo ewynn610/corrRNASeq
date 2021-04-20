@@ -238,7 +238,8 @@ calc_df<-function(model, df, method){
     if(method=="nbmm_ml") model=lme4::lmer(formula = model$formula, data=model$data)
     if(method=="lmm") model=model$fit
     ids<-names(ranef(model))
-    if(length(unique(table(model@frame[,ids])))!=1) stop("Must have the same number of measurements for each subject")
+    #Mistake-not arequirement to have same number of measurements for each subject
+    #if(length(unique(table(model@frame[,ids])))!=1) stop("Must have the same number of measurements for each subject")
     x_mat=matrix(getME(model, "X"), ncol =ncol(getME(model, "X")))
     if(df=="residual"){
       x_rank=qr(x_mat)$rank
