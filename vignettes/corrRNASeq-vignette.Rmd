@@ -4,10 +4,10 @@ author: "Elizabeth Wynn"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{corrRNASeq-vignette}
+%\VignetteIndexEntry{corrRNASeq-vignette}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-bibliography: vignette_refs.bib
+  bibliography: vignette_refs.bib
 ---
 
 ```{r, include = FALSE}
@@ -93,7 +93,7 @@ The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, wh
 | :-------------- | :---------------------------------------------------| 
 | corrSeq_results         | Results object from running corrSeq_fit. |        
 | coefficient  | Character string or numeric indicator of which coefficient to summarize.| 
- 
+
 
 
 #### _Additional Arguments_
@@ -144,16 +144,16 @@ The goal of our analysis will be to compare changes over time between the contro
 ### GEE
 If $Y_{gij}$ is the read count for gene $g$, subject $i$, timepoint $j$, then assuming $Y_{gij}$ has a Poisson distribution with an extra scale parameter, $\phi_g$ in the variance to account for overdispersion:
 \begin{eqnarray}
- \label{eq:gee}
+\label{eq:gee}
 E(Y_{gij})&=&\mu_{gij}, Var(Y_{gij})=\mu_{gij}\phi_g  \\
 \mu_{gij} &=& \beta_{g0} + \beta_{g1} I_{T_i} + \beta_{g2} I_{F_{ij}} + \beta_{g3}I_{T_i} I_{F_{ij}} + \rho_{ij}
 \end{eqnarray}
- where $I_{T_i}$ is an indicator function that equals 1 if subject $i$ is in the treatment group, and $I_{F_{ij}}$ is a similar indicator for if observation $j$ is the follow-up. The $\boldsymbol{\beta}_g$ parameters are model coefficients and $\rho_{ij}$ is an offset to account for differences in sequencing depth.
- 
+where $I_{T_i}$ is an indicator function that equals 1 if subject $i$ is in the treatment group, and $I_{F_{ij}}$ is a similar indicator for if observation $j$ is the follow-up. The $\boldsymbol{\beta}_g$ parameters are model coefficients and $\rho_{ij}$ is an offset to account for differences in sequencing depth.
+
 ### NBMM
 The model framework for both types of NBMM models are the same, though the parameter estimation differs. Using the same notation as above, the model can be written:
 \begin{eqnarray}
- \label{eq:nbmm}
+\label{eq:nbmm}
 Y_{gij} &\sim& \mathcal{NB}(\mu_{gij}, \alpha_g) \nonumber \\
 \log(\mu_{gij}) &=& \beta_{g0} + \beta_{g1} I_{T_i} + \beta_{g2} I_{F_{ij}} + \beta_{g3}I_{T_i} I_{F_{ij}} + b_{gi} + \rho_{ij} \nonumber \\
 b_{gi} &\sim& \mathcal{N}(0, \sigma_{gb}^2) \nonumber
@@ -175,19 +175,17 @@ where $\sigma_g^2$ is the gene-specific variance for our outcome of interest.
 To fit models using each of the methods, we use the ```corrSeq_fit``` function. The ```method``` argument is used to specify one of the four model fitting methods (```"gee"```, ```"nbmm_ml"```, ```"nbmm_pl"``` or ```"lmm"```) The ```expr_mat``` argument takes a data frame or matrix of RNA-Seq expression data, the columns of which must be in the same order as the rows of ```sample_data``` data frame, which contains metadata on each sample.  The model formula is passed to the ```formula``` argument as a one sided formula with the model effects, which must be included in the ```sample_data``` data frame. Offset terms may also be included in the model formula. By default, the ```corrSeq_fit``` will use rownames of the counts matrix to identify genes.  If you would like to use a different set of gene names, you can supply a character vector of names in the same order as the rows of the counts matrix to the gene_names option. For models fit using ```method="gee"```, the ```id``` argument must be specified either with a vector identifying the cluster/subject for each sample, or a column name for a column of ids in the ```sample_data``` data frame. Additionally for ```method="gee"```, a small sample adjustment method can be specified using the ```small.samp.method``` option. If you are using Mac or Linux and would like to use use forking (via ```mclapply```) to parallelize fits, the ```parallel``` argument should be set to ```TRUE``` and the number of cores to be used should be passed to the ```cores``` argument. Finally, additional arguments  to be passed to the functions used to fit individual models ( ```lmer``` (method="lmm"), ```gee_small_sample```, (method="lmm"),```glmm_nb_lmer``` (method="nbmm_pl") or ```glmmadmb``` (method="nbmm_ml")) can also be specified.
 
 ```{r}
- #########  Fit the Models for each method ###############
+#########  Fit the Models for each method ###############
 
 ## GEE models using Wang-Long small sample size estimator
-## log(library size) as an offset to adjust for sequencing depth
 gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log_offset),
-                           expr_mat = counts,
-                           sample_data = sample_meta_data,
-                           method="gee",
-                           id=ids,
-                           small.samp.method="wl")
+                       expr_mat = counts,
+                       sample_data = sample_meta_data,
+                       method="gee",
+                       id=ids,
+                       small.samp.method="wl")
 
 ## Fit NBMM-PL models
-## Use log(library size) as an offset
 nbmm_pl_fit <- corrSeq_fit(formula = ~ group *time+
                              offset(log_offset)+(1|ids),
                            expr_mat = counts,
@@ -196,19 +194,17 @@ nbmm_pl_fit <- corrSeq_fit(formula = ~ group *time+
 
 ## Fit NBMM-ML models
 ## Random effects must be factors
-## Use log(library size) as an offset
 sample_meta_data$ids<-factor(sample_meta_data$ids)
-nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
-                           expr_mat = counts,
+nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="nbmm_ml")
 
 ##  Fit LMM Models
 ## Use VST expression data instead of raw counts
 lmm_fit<- corrSeq_fit(formula = ~ group * time + (1|ids),
-                           expr_mat = vst_expr,
-                           sample_data = sample_meta_data,
-                           method="lmm")
+                      expr_mat = vst_expr,
+                      sample_data = sample_meta_data,
+                      method="lmm")
 
 ###################Inspect Model objects############
 
@@ -231,36 +227,36 @@ The resulting object for each method is a list with elements for every gene in t
 Model coefficients can be more easily summarized with the ```lmSeq.summary``` function, which calculates and tabulates degrees of freedom and adjusted p-values, as well as other results. The coefficient of interest can be passed to the function either as a numeric indicator or character string. In calculating adjusted p-values, you can choose between various adjustment methods (see ```p.adjust.methods)``` and four degrees of freedom methods (residual, containment, Satterthwaite, or Kenward-Roger; latter two methods only available for NBMM-PL and LMM models). The resulting table can also be sorted by adjusted p-value by setting the ```sort_results``` option to ```TRUE```.
 
 ```{r}
- ##  Summarize group effect for GEE models using residual DF
+##  Summarize group effect for GEE models using residual DF
 gee_sum_group <-corrSeq_summary(corrSeq_results = gee_fit,
-                             coefficient = "group",
-                             p_adj_method = 'BH',
-                             df = 'residual',
-                             sort_results = T)
+                                coefficient = "group",
+                                p_adj_method = 'BH',
+                                df = 'residual',
+                                sort_results = T)
 
 ##  Summarize group effect for NBMM-ML models using containment DF
 ## Use coefficient number instead of name
 nbmm_ml_sum_group <-corrSeq_summary(corrSeq_results = nbmm_ml_fit,
-                             coefficient = 2,
-                             p_adj_method = 'BH',
-                             df = 'residual',
-                             sort_results = T)
+                                    coefficient = 2,
+                                    p_adj_method = 'BH',
+                                    df = 'residual',
+                                    sort_results = T)
 
 ## Summarize interaction effect for NBMM-PL models 
 ## using Satterthwaite DF
 nbmm_pl_sum_inter <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
-                             coefficient = 4,
-                             p_adj_method = 'BH',
-                             df = 'Satterthwaite',
-                             sort_results = T)
+                                    coefficient = 4,
+                                    p_adj_method = 'BH',
+                                    df = 'Satterthwaite',
+                                    sort_results = T)
 
 ## Summarize time effect for LMM models 
 ## using Kenward-Roger DF
 lmm_sum_time <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
-                             coefficient = "time",
-                             p_adj_method = 'BH',
-                             df = 'Satterthwaite',
-                             sort_results = T)
+                               coefficient = "time",
+                               p_adj_method = 'BH',
+                               df = 'Satterthwaite',
+                               sort_results = T)
 
 
 #Look at one of the summary objects

@@ -65,7 +65,7 @@
 #' ## Fit LMM models to transformed data
 #' ## Use the variance transformed counts in the simdata object
 #' ## Subset down to 10 genes
-#' vst_expr<-simdata$simdata$vst_expr[1:10,]
+#' vst_expr<-simdata$vst_expr[1:10,]
 #'
 #' ##  Fit the Models
 #' lmm_fit<- corrSeq_fit(formula = ~ group * time + (1|ids),
