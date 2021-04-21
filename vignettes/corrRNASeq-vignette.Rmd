@@ -179,7 +179,7 @@ To fit models using each of the methods, we use the ```corrSeq_fit``` function. 
 
 ## GEE models using Wang-Long small sample size estimator
 ## log(library size) as an offset to adjust for sequencing depth
-gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log(lib_size)),
+gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log_offset),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="gee",
@@ -189,7 +189,7 @@ gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log(lib_size)),
 ## Fit NBMM-PL models
 ## Use log(library size) as an offset
 nbmm_pl_fit <- corrSeq_fit(formula = ~ group *time+
-                             offset(log(lib_size))+(1|ids),
+                             offset(log_offset)+(1|ids),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="nbmm_pl")
@@ -198,7 +198,7 @@ nbmm_pl_fit <- corrSeq_fit(formula = ~ group *time+
 ## Random effects must be factors
 ## Use log(library size) as an offset
 sample_meta_data$ids<-factor(sample_meta_data$ids)
-nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="nbmm_ml")

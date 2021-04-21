@@ -40,8 +40,8 @@
 #' counts=simdata$counts[1:10,]
 #'
 #' ## Fit GEE models using Wang-Long small sample size estimator
-#' ## Use log(library size) as an offset
-#' gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log(lib_size)),
+#' ## log_offset is the log size factors from the DESeq2 package
+#' gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log_offset),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="gee",
@@ -49,17 +49,15 @@
 #'                            small.samp.method="wl")
 #'
 #' ## Fit NBMM-PL models
-#' ## Use log(library size) as an offset
-#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_pl")
 #'
 #' ## Fit NBMM-ML models
 #' ## Random effects must be factors
-#' ## Use log(library size) as an offset
 #' sample_meta_data$ids<-factor(sample_meta_data$ids)
-#' nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+#' nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_ml")
@@ -166,16 +164,12 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
     if(parallel == F){
       ret <- pbapply::pblapply(X = 1:nrow(expr_mat),
                                FUN = function(i){
-                                 start=Sys.time()
-                                 print(i)
                                  dat_sub <- cbind(sample_data, data.frame(expr = as.numeric(expr_mat[i, ])))
                                  ret_sub <- tryCatch({
                                    tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                  }, error = function(e) {
                                    ret_sub2 <- NULL
                                  })
-                                 end=Sys.time()
-                                 print(end-start)
                                  ret2 <- ret_sub
                                  if(method=="nbmm_ml"&!is.null(ret2)) ret2$data=dat_sub
                                  ret2
@@ -186,7 +180,6 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                 mc.silent = F,
                                 mc.cores = cores,
                                 FUN = function(i){
-                                  print(paste("Gene",i))
                                   dat_sub <- cbind(sample_data, data.frame(expr = as.numeric(expr_mat[i, ])))
                                   ret_sub <- tryCatch({
                                     tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))

@@ -64,8 +64,8 @@ sample_meta_data <- simdata$metadata
 counts=simdata$counts[1:10,]
 
 ## Fit GEE models using Wang-Long small sample size estimator
-## Use log(library size) as an offset
-gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log(lib_size)),
+## log_offset is the log size factors from the DESeq2 package
+gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log_offset),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="gee",
@@ -73,17 +73,15 @@ gee_fit <- corrSeq_fit(formula = ~ group * time+offset(log(lib_size)),
                            small.samp.method="wl")
 
 ## Fit NBMM-PL models
-## Use log(library size) as an offset
-nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="nbmm_pl")
 
 ## Fit NBMM-ML models
 ## Random effects must be factors
-## Use log(library size) as an offset
 sample_meta_data$ids<-factor(sample_meta_data$ids)
-nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="nbmm_ml")
