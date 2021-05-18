@@ -4,12 +4,11 @@ author: "Elizabeth Wynn"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-%\VignetteIndexEntry{corrRNASeq-vignette}
+  %\VignetteIndexEntry{corrRNASeq-vignette}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  bibliography: vignette_refs.bib
+bibliography: vignette_refs.bib
 ---
-
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
