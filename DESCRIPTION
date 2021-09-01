@@ -19,11 +19,10 @@ Imports:
     gtools,
     stats,
     matrixcalc,
-    rmRNAseq,
     GLMMadaptive,
     ptmixed
 Depends: pbkrtest, lmerSeq
-Remotes: stop-pre16/lmerSeq, ntyet/rmRNAseq
+Remotes: stop-pre16/lmerSeq
 Authors@R: 
     person(given = "Elizabeth",
            family = "Wynn",
