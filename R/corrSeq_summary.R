@@ -3,7 +3,9 @@
 #' Conducts t-tests on individual regression coefficients from models fit from the \code{\link{corrSeq_fit}} function.
 #'
 #' @param corrSeq_results Results object from running \code{\link{corrSeq_fit}}.
-#' @param coefficient Character string or numeric indicator of which coefficient to summarize
+#' @param coefficient Character string or numeric indicator of which coefficient to summarize. Ignored if contrast is specified.
+#' @param contrast numeric vector or matrix specifying a contrast of the linear model coefficients to be tested.
+#' Number of columns must equal the number of coefficients in the model. If specified, then takes precedence over coefficient.
 #' @param p_adj_method Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}}.
 #' @param df Method for computing degrees of freedom and t-statistics.
 #' The options "Satterthwaite" and "Kenward-Roger" can only be used for
@@ -13,7 +15,8 @@
 #'
 #' @return This function returns a list object with the following components:
 #'
-#' \item{coefficient}{Name of the coefficient being summarized.}
+#' \item{coefficient}{Name of the coefficient being summarized (if given).}
+#' \item{contrast_mat}{Contrast matrix (if given)}
 #' \item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
 #' \item{df}{Method for computing the degrees of freedom.}
 #' \item{p_adj_method}{Method for adjusting the raw p-values.}
@@ -34,7 +37,7 @@
 #'
 #' ## Fit NBMM-PL models
 #' ## Use log(library size) as an offset
-#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+#' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_pl")
@@ -53,6 +56,7 @@
 
 corrSeq_summary <- function(corrSeq_results = NULL, # Results object from running lmerSeq.fit
                             coefficient = NULL, # Character string or numeric indicator of which coefficient to summarize
+                            contrast=NULL, #Matrix with matrix to be tested
                             p_adj_method = "BH", # Method for adjusting for multiple comparisons (default is Benjamini-Hochberg)
                             df = "residual", # Method for computing degrees of freedom and t-statistics. Options are "Satterthwaite" and "Kenward-Roger"
                             sort_results = T # Should the results table be sorted by adjusted p-value?
@@ -63,10 +67,19 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
   #Get genenames (names from list)
   gene_names <- names(corrSeq_results)
 
+  # Is it contrast?
+  contrast_tf=!is.null(contrast)
+
+  ## Is it a multiple coefficient test?
+  joint_flag=ifelse(contrast_tf, nrow(contrast)>1, F)
+  joint_flag=ifelse(is.na(joint_flag), F, joint_flag)
+
 
   if(identical(names(corrSeq_results[[1]]),c("fit", "gene"))){
     method="lmm"
-    df_methods=c("Satterthwaite", "Kenward-Roger", "containment", "residual")
+    if(joint_flag){
+      df_methods=c("Satterthwaite", "Kenward-Roger")
+    }else df_methods=c("Satterthwaite", "Kenward-Roger", "containment", "residual")
     if(!(df %in% df_methods)&!is.numeric(df)){
       stop("Invalid df method")
     }
@@ -74,9 +87,21 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     #This gives us t-statistic, etc.
     df2=df
     if(!(df %in% c("Satterthwaite", "Kenward-Roger"))) df2="Satterthwaite"
-    ret2=lmerSeq.summary(corrSeq_results, coefficient = coefficient,
-                         p_adj_method = p_adj_method,
-                         ddf=df2, sort_results = sort_results)
+
+    if(contrast_tf){
+      ret2=lmerSeq.contrast(corrSeq_results, contrast_mat = rbind(contrast),
+                           p_adj_method = p_adj_method,
+                           ddf=df2, sort_results = sort_results)
+      ## Remove upper, lower if one dimensional contrast
+      # Just so results match
+      if(!joint_flag) ret2$summary_table=ret2$summary_table%>%dplyr::select(-upper, -lower)%>%dplyr::rename(Std.Error="Std..Error")
+    }else{
+      ret2=lmerSeq.summary(corrSeq_results, coefficient = coefficient,
+                           p_adj_method = p_adj_method,
+                           ddf=df2, sort_results = sort_results)
+      ret2$summary_table=ret2$summary_table%>%dplyr::rename(Std.Error="Std..Error")
+    }
+
     #First non-null model
     if(df!=df2){
       if(!is.numeric(df)){
@@ -110,7 +135,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmm_nb_mod"){
       method="nbmm_pl"
       coef_names<-names(lme4::fixef(corrSeq_results[[idx_non_null_1]]))
-      df_methods=c("containment", "residual", "Satterthwaite", "Kenward-Roger")
+      if(joint_flag){
+        df_methods=c("Satterthwaite", "Kenward-Roger")
+      }else df_methods=c("containment", "residual", "Satterthwaite", "Kenward-Roger")
       idx_singular<-which(sapply(corrSeq_results, function(x) if(is.null(x)) F else lme4::isSingular(x)))
       idx_not_converged<-which(sapply(corrSeq_results, function(x) if(!is.null(x)) x@converged==F else T))
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
@@ -130,18 +157,20 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     ############################################################################################################
     #Error Messages for insufficient or inconsistent information
     ############################################################################################################
-    if(is.numeric(coefficient)){
-      if((coefficient > length(coef_names)) | coefficient < 1){
-        stop("Coefficient number is invalid")
+    if(!contrast_tf){
+      if(is.numeric(coefficient)){
+        if((coefficient > length(coef_names)) | coefficient < 1){
+          stop("Coefficient number is invalid")
+        }
+        coef_out <- coef_names[coefficient]
+      }else{
+        if(!(coefficient %in% coef_names)){
+          stop("Coefficient name is invalid")
+        }
+        coef_out <- coefficient
       }
-      coef_out <- coef_names[coefficient]
     }
-    else{
-      if(!(coefficient %in% coef_names)){
-        stop("Coefficient name is invalid")
-      }
-      coef_out <- coefficient
-    }
+
 
     if(!(p_adj_method %in% p.adjust.methods)){
       stop("Invalid p_adj_method")
@@ -154,13 +183,24 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     if(df %in% c("Satterthwaite", "Kenward-Roger")){
       ret <- do.call(rbind, lapply(corrSeq_results[idx_converged_not_singular], function(x){
         # x = corrSeq_results$fitted_models[[1]]
-        res_sub <- summary(x, ddf = df)$coefficients[coefficient, ]
+        if(!contrast_tf){
+          res_sub <- summary(x, ddf = df)$coefficients[coefficient, ]
+          names(res_sub)[names(res_sub)=="Pr(>|t|)"]<-"p_val_raw"
+          }else{
+            res_sub<-lmerTest::contest(x, contrast, ddf=df, joint=joint_flag)
+            names(res_sub)[names(res_sub)%in%c("Pr(>F)","Pr(>|t|)")]<-"p_val_raw"
+          }
         return(res_sub)
-      }))%>%data.frame()%>%dplyr::rename(p_val_raw ="Pr...t..")%>%dplyr::mutate(Gene=gene_names[idx_converged_not_singular],
-                                                                                p_val_adj = p.adjust(p_val_raw, method = p_adj_method))%>%
-        dplyr::select(Gene, Estimate, Std.Error="Std..Error", "df","t.value",
-                      p_val_raw, p_val_adj)
-
+      }))%>%data.frame()%>%
+        dplyr::mutate(Gene=gene_names[idx_converged_not_singular],
+                      p_val_adj = p.adjust(p_val_raw, method = p_adj_method))
+      if(joint_flag){
+        ret=ret%>%dplyr::select(Gene, Sum.Sq, Mean.Sq,NumDF, DenDF,F.value,
+                                p_val_raw, p_val_adj)
+      }else{
+        ret=ret%>%dplyr::select(Gene, Estimate, Std.Error="Std..Error", "df","t.value",
+                                p_val_raw, p_val_adj)
+      }
 
     }else{
       #If df will be same for all models, calculate now
@@ -169,7 +209,6 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         df=calc_df(model = corrSeq_results[[1]],df = df, method=method)
       }
       ret=lapply(corrSeq_results[idx_converged_not_singular], function(x){
-
         #Estimate and std. error for gee
         if(method=="gee"){
           Estimate=x$coefficients[coefficient]
@@ -178,8 +217,14 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
             Std.Error=sqrt(x$small.samp.var[coefficient])
           }else Std.Error=summary(x)$coefficients[coefficient,"Std.err"]
         }else if(method=="nbmm_pl"){
-          Estimate=summary(x)$coefficients[coefficient,"Estimate"]
-          Std.Error=summary(x)$coefficients[coefficient,"Std. Error"]
+          if(contrast_tf){
+            cont=lmerTest::contest(x, L=contrast, joint=F)$Estimate
+            Estimate=cont$Estimate
+            Std.Error=cont$`Std. Error`
+          }else{
+            Estimate=summary(x)$coefficients[coefficient,"Estimate"]
+            Std.Error=summary(x)$coefficients[coefficient,"Std. Error"]
+          }
         }else if(method=="nbmm_ml"){
           Estimate=summary(x)$coefficient[coefficient, "Estimate"]
           Std.Error=summary(x)$coefficient[coefficient, "Std. Error"]
@@ -205,9 +250,14 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 
 
     rownames(ret) <- NULL
-    ret2 <- list(coefficient = coef_out,
-                 summary_table = ret,
+    if(contrast_tf){
+      ret2<-list(contrast_mat=contrast,summary_table = ret,
                  p_adj_method = p_adj_method)
+    }else{
+      ret2 <- list(coefficient = coef_out,
+                   summary_table = ret,
+                   p_adj_method = p_adj_method)
+    }
     if(method !="gee"){
       genes_singular_fits <- as.character(gene_names[idx_singular])
       genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
