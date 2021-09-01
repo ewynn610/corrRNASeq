@@ -151,7 +151,22 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       )
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
       df_methods=c("containment", "residual")
-    }
+    }else if("ptglmm" %in% class(corrSeq_results[[idx_non_null_1]])){
+      method="ptmixed"
+      coef_names=rownames(summary(corrSeq_results[[idx_non_null_1]], wald=F, silent=T)$coefficients)
+      idx_not_converged<-which(sapply(corrSeq_results, function(x) ifelse(is.null(x$convergence), T, x$convergence!=0)))
+      idx_converged_not_singular=which(!(1:length(corrSeq_results)%in% idx_not_converged))
+      df_methods=NA
+    }else if(class(corrSeq_results[[idx_non_null_1]])=="MixMod"){
+        method="nbmm_adq"
+        coef_names=names(corrSeq_results[[idx_non_null_1]]$coefficients)
+        idx_not_converged<-which(sapply(corrSeq_results, function(x) ifelse(is.null(x$converged), T, !x$converged)))
+        idx_singular<-which(sapply(corrSeq_results, function(x){
+          any(diag(x$D)<1e-05)
+        }))
+        idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
+      df_methods=NA
+        }
 
 
     ############################################################################################################
@@ -229,18 +244,52 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
           Estimate=summary(x)$coefficient[coefficient, "Estimate"]
           Std.Error=summary(x)$coefficient[coefficient, "Std. Error"]
         }
-        if(!is.numeric(df)){
+        if(!is.numeric(df)&method!="ptmixed"&method!="nbmm_adq"){
           df=calc_df(model=x, df=df, method=method)
         }
-        t.value=Estimate/Std.Error
-        p_val_raw=2*pt(-abs(t.value),
-                       df=df)
-
-        data.frame(Estimate=Estimate, Std.Error=Std.Error, df=df,
-                   t.value=t.value, p_val_raw=p_val_raw)
+        if(method!="ptmixed"& method!="nbmm_adq"){
+          t.value=Estimate/Std.Error
+          p_val_raw=2*pt(-abs(t.value),
+                         df=df)
+          df=data.frame(Estimate=Estimate, Std.Error=Std.Error, df=df,
+                        t.value=t.value, p_val_raw=p_val_raw)
+        }else if(method=="ptmixed"){
+          if(contrast_tf){
+            df=tryCatch({ptmixed::wald.test(x, L=contrast)},
+                              error = function(e) {
+                                data.frame(chi2=NA, df=NA, P=NA)
+                              })
+            names(df)[names(df)=="P"]<-"p_val_raw"
+            names(df)[names(df)=="chi2"]<-"Chisq"
+          }else{
+            df=tryCatch({summary(x, silent=T)$coefficients[coefficient,]},
+                              error = function(e) {
+                                c(Estimate=NA, "Std. error"=NA, z=NA, p.value=NA)
+                              })
+            names(df)[names(df)=="p.value"]<-"p_val_raw"
+            names(df)[names(df)=="Std. error"]<-"Std.Err"
+            names(df)[names(df)=="z"]<-"z-value"
+          }
+        }else if(method=="nbmm_adq"){
+          if(contrast_tf){
+            df=GLMMadaptive::anova(x, L=rbind(contrast))$aovTab.L
+            colnames(df)[colnames(df)=="Pr(>|Chi|)"]<-"p_val_raw"
+          }else{
+            df=summary(x)$coef_table[coefficient,]
+            names(df)[names(df)=="p-value"]<-"p_val_raw"
+          }
+        }
+        df
       })%>%dplyr::bind_rows()%>%
-        dplyr::mutate(Gene=gene_names[idx_converged_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))%>%
-        dplyr::select(Gene, Estimate, Std.Error, df, t.value, p_val_raw, p_val_adj)
+        dplyr::mutate(Gene=gene_names[idx_converged_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))
+        if(method!="ptmixed"&method!="nbmm_adq"){
+          ret=ret%>%dplyr::select(Gene, Estimate, Std.Error, df, t.value,
+                                  p_val_raw, p_val_adj)
+        }else{
+          if(contrast_tf){
+            ret=ret%>%dplyr::select(Gene, Chisq, df, p_val_raw, p_val_adj)
+          }else ret=ret%>%dplyr::select(Gene, Estimate, Std.Err, "z-value", p_val_raw, p_val_adj)
+        }
 
     }
 
@@ -251,14 +300,14 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 
     rownames(ret) <- NULL
     if(contrast_tf){
-      ret2<-list(contrast_mat=contrast,summary_table = ret,
+      ret2<-list(contrast_mat=contrast,summary_table = data.frame(ret),
                  p_adj_method = p_adj_method)
     }else{
       ret2 <- list(coefficient = coef_out,
-                   summary_table = ret,
+                   summary_table = data.frame(ret),
                    p_adj_method = p_adj_method)
     }
-    if(method !="gee"){
+    if(method !="gee"&method!="ptmixed"){
       genes_singular_fits <- as.character(gene_names[idx_singular])
       genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
       ret2$singular_fits = genes_singular_fits
@@ -273,7 +322,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       dplyr::arrange(p_val_adj)
   }
   ret2$model_method=method
-  ret2$df=df_name
+  if(method!="ptmixed"|method!="nbmm_adq") ret2$df=df_name
   rownames(ret2$summary_table)<-NULL
   return(ret2)
 }

@@ -81,7 +81,9 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                         sample_data = NULL, # A data frame with sample meta data
                         method,
                         id,
+                        offset=NULL,
                         small.samp.method=NULL,
+                        random=NULL,
                         parallel = F,
                         cores = 2,
                         ...
@@ -159,6 +161,15 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
     }else if(method=="nbmm_pl"){
       args<-list(formula=form_sub, data=quote(dat_sub),...)
       method_call=glmm_nb_lmer
+    }else if(method=="ptmixed"){
+      args=list(fixef.formula=form_sub, id=substitute(id), offset=substitute(offset),
+                data=quote(dat_sub),trace=F, ...)
+      method_call=ptmixed::ptmixed
+    }else if(method=="nbmm_adq"){
+      args=args2=list(fixed=form_sub, random=random, data=quote(dat_sub),
+                family=GLMMadaptive::negative.binomial(), ...)
+      args2$family=poisson()
+      method_call=GLMMadaptive::mixed_model
     }
 
     if(parallel == F){
@@ -168,7 +179,13 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                  ret_sub <- tryCatch({
                                    tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                  }, error = function(e) {
-                                   ret_sub2 <- NULL
+                                   if(method=="nbmm_adq"){
+                                     #If error, try fitting with a poisson model
+                                     ret_sub2  <- tryCatch({
+                                       tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args2)))
+                                     }, error=function(e){NULL})
+                                   }else ret_sub2 <- NULL
+                                   ret_sub2
                                  })
                                  ret2 <- ret_sub
                                  if(method=="nbmm_ml"&!is.null(ret2)) ret2$data=dat_sub
