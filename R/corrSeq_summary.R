@@ -202,8 +202,15 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
           res_sub <- summary(x, ddf = df)$coefficients[coefficient, ]
           names(res_sub)[names(res_sub)=="Pr(>|t|)"]<-"p_val_raw"
           }else{
-            res_sub<-lmerTest::contest(x, contrast, ddf=df, joint=joint_flag)
-            names(res_sub)[names(res_sub)%in%c("Pr(>F)","Pr(>|t|)")]<-"p_val_raw"
+            res_sub<-tryCatch({
+              res_sub=lmerTest::contest(x, contrast, ddf=df, joint=joint_flag)
+              names(res_sub)[names(res_sub)%in%c("Pr(>F)","Pr(>|t|)")]<-"p_val_raw"
+              res_sub
+            },
+            error=function(e){
+              c("Sum Sq"=NA, "Mean Sq"=NA, "NumDF"=NA, "DenDF"=NA,
+                         "F value"=NA, p_val_raw=NA)
+            })
           }
         return(res_sub)
       }))%>%data.frame()%>%
