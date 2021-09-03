@@ -279,8 +279,14 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
           }
         }else if(method=="nbmm_adq"){
           if(contrast_tf){
-            df=GLMMadaptive::anova(x, L=rbind(contrast))$aovTab.L
-            colnames(df)[colnames(df)=="Pr(>|Chi|)"]<-"p_val_raw"
+            df=tryCatch({
+              df=GLMMadaptive::anova(x, L=rbind(contrast))$aovTab.L
+              colnames(df)[colnames(df)=="Pr(>|Chi|)"]<-"p_val_raw"
+              df
+            },error=function(e){
+              data.frame(Chisq=NA, df=NA, p_val_raw=NA)
+            })
+
           }else{
             df=summary(x)$coef_table[coefficient,]
             names(df)[names(df)=="p-value"]<-"p_val_raw"
