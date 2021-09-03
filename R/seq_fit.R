@@ -163,7 +163,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
       method_call=glmm_nb_lmer
     }else if(method=="ptmixed"){
       args=list(fixef.formula=form_sub, id=substitute(id), offset=substitute(offset),
-                data=quote(dat_sub),trace=F, ...)
+                data=quote(dat_sub),trace=F,maxit=c(1000,100), ...)
       method_call=ptmixed::ptmixed
     }else if(method=="nbmm_adq"){
       args=args2=list(fixed=form_sub, random=random, data=quote(dat_sub),
