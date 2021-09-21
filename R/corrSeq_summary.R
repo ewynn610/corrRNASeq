@@ -74,8 +74,11 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
   joint_flag=ifelse(contrast_tf, nrow(contrast)>1, F)
   joint_flag=ifelse(is.na(joint_flag), F, joint_flag)
 
+  ## First non-null index
+  idx_non_null_1=which(!sapply(corrSeq_results, is.null))[1]
 
-  if(identical(names(corrSeq_results[[1]]),c("fit", "gene"))){
+  ##LMM
+  if(identical(names(corrSeq_results[[idx_non_null_1]]),c("fit", "gene"))){
     method="lmm"
     if(joint_flag){
       df_methods=c("Satterthwaite", "Kenward-Roger")
