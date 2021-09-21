@@ -231,7 +231,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       #If df will be same for all models, calculate now
       constant_df_methods=c("residual", "containment")
       if(df %in% constant_df_methods){
-        df=calc_df(model = corrSeq_results[[1]],df = df, method=method)
+        df=calc_df(model = corrSeq_results[[idx_non_null_1]],df = df, method=method)
       }
       ret=lapply(corrSeq_results[idx_converged_not_singular], function(x){
         #Estimate and std. error for gee
