@@ -175,7 +175,6 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
     if(parallel == F){
       ret <- pbapply::pblapply(X = 1:nrow(expr_mat),
                                FUN = function(i){
-                                 print(i)
                                  dat_sub <- cbind(sample_data, data.frame(expr = as.numeric(expr_mat[i, ])))
                                  ret_sub <- tryCatch({
                                    tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))

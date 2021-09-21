@@ -93,7 +93,6 @@ geeglm_small_samp<-function (formula,
     index <- which(names(data) == id)
     data$id <- data[, index]
   }
-  browser()
 
   init <- model.frame(formula, data)
   init$num <- 1:length(init[, 1])
