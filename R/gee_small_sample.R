@@ -133,7 +133,7 @@ geeglm_small_samp<-function (formula,
   #########Drawing largely from code from geesmv package############
   len <- length(beta_est)
   len_vec <- len^2
-  data$id <- as.numeric(gee.fit$id)
+  data$id <- as.numeric(factor(gee.fit$id)) ## EAW: 1st make factor in case id is character vector
   cluster <- cluster.size(data$id)
   ncluster <- max(cluster$n)
   size <- cluster$m
