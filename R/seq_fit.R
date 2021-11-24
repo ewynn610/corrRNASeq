@@ -201,7 +201,13 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                   ret_sub <- tryCatch({
                                     tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                   }, error = function(e) {
-                                    ret_sub2 <- NULL
+                                    if(method=="nbmm_adq"){
+                                      #If error, try fitting with a poisson model
+                                      ret_sub2  <- tryCatch({
+                                        tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args2)))
+                                      }, error=function(e){NULL})
+                                    }else ret_sub2 <- NULL
+                                    ret_sub2
                                   })
                                   ret2 <- ret_sub
                                   if(method=="nbmm_ml"&!is.null(ret2)) ret2$data=dat_sub
