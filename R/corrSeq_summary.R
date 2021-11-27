@@ -55,6 +55,7 @@
 #'
 
 corrSeq_summary <- function(corrSeq_results = NULL, # Results object from running lmerSeq.fit
+                            corrSeq_results_reduced=NULL, #
                             coefficient = NULL, # Character string or numeric indicator of which coefficient to summarize
                             contrast=NULL, #Matrix with matrix to be tested
                             p_adj_method = "BH", # Method for adjusting for multiple comparisons (default is Benjamini-Hochberg)
@@ -69,6 +70,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 
   # Is it contrast?
   contrast_tf=!is.null(contrast)
+
+  # Are reduced models provided?
+  reduced_tf=!is.null(corrSeq_results_reduced)
 
   ## Is it a multiple coefficient test?
   joint_flag=ifelse(contrast_tf, nrow(contrast)>1, F)
@@ -154,12 +158,6 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       )
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
       df_methods=c("containment", "residual")
-    }else if("ptglmm" %in% class(corrSeq_results[[idx_non_null_1]])){
-      method="ptmixed"
-      coef_names=rownames(summary(corrSeq_results[[idx_non_null_1]], wald=F, silent=T)$coefficients)
-      idx_not_converged<-which(sapply(corrSeq_results, function(x) ifelse(is.null(x$convergence), T, x$convergence!=0)))
-      idx_converged_not_singular=which(!(1:length(corrSeq_results)%in% idx_not_converged))
-      df_methods=NA
     }else if(class(corrSeq_results[[idx_non_null_1]])=="MixMod"){
         method="nbmm_adq"
         coef_names=names(corrSeq_results[[idx_non_null_1]]$coefficients)
@@ -175,7 +173,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     ############################################################################################################
     #Error Messages for insufficient or inconsistent information
     ############################################################################################################
-    if(!contrast_tf){
+    if(!contrast_tf& !reduced_tf){
       if(is.numeric(coefficient)){
         if((coefficient > length(coef_names)) | coefficient < 1){
           stop("Coefficient number is invalid")
@@ -233,78 +231,81 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       if(df %in% constant_df_methods){
         df=calc_df(model = corrSeq_results[[idx_non_null_1]],df = df, method=method)
       }
-      ret=lapply(corrSeq_results[idx_converged_not_singular], function(x){
+      ret=lapply(idx_converged_not_singular, function(x){
         #Estimate and std. error for gee
         if(method=="gee"){
-          Estimate=x$coefficients[coefficient]
+          Estimate=corrSeq_results[[x]]$coefficients[coefficient]
           #if small sample method was used
-          if(!is.null(x$small.samp.va)){
-            Std.Error=sqrt(x$small.samp.var[coefficient])
-          }else Std.Error=summary(x)$coefficients[coefficient,"Std.err"]
+          if(!is.null(corrSeq_results[[x]]$small.samp.va)){
+            Std.Error=sqrt(corrSeq_results[[x]]$small.samp.var[coefficient])
+          }else Std.Error=summary(corrSeq_results[[x]])$coefficients[coefficient,"Std.err"]
         }else if(method=="nbmm_pl"){
           if(contrast_tf){
-            cont=lmerTest::contest(x, L=contrast, joint=F)$Estimate
+            cont=lmerTest::contest(corrSeq_results[[x]], L=contrast, joint=F)$Estimate
             Estimate=cont$Estimate
             Std.Error=cont$`Std. Error`
           }else{
-            Estimate=summary(x)$coefficients[coefficient,"Estimate"]
-            Std.Error=summary(x)$coefficients[coefficient,"Std. Error"]
+            Estimate=summary(corrSeq_results[[x]])$coefficients[coefficient,"Estimate"]
+            Std.Error=summary(corrSeq_results[[x]])$coefficients[coefficient,"Std. Error"]
           }
-        }else if(method=="nbmm_ml"){
-          Estimate=summary(x)$coefficient[coefficient, "Estimate"]
-          Std.Error=summary(x)$coefficient[coefficient, "Std. Error"]
+        }else if(method=="nbmm_ml"& !reduced_tf){
+          Estimate=summary(corrSeq_results[[x]])$coefficient[coefficient, "Estimate"]
+          Std.Error=summary(corrSeq_results[[x]])$coefficient[coefficient, "Std. Error"]
         }
-        if(!is.numeric(df)&method!="ptmixed"&method!="nbmm_adq"){
-          df=calc_df(model=x, df=df, method=method)
+        if(!is.numeric(df)&method!="nbmm_adq"){
+          df=calc_df(model=corrSeq_results[[x]], df=df, method=method)
         }
-        if(method!="ptmixed"& method!="nbmm_adq"){
+        if(method!="nbmm_adq"){
           t.value=Estimate/Std.Error
           p_val_raw=2*pt(-abs(t.value),
                          df=df)
           df=data.frame(Estimate=Estimate, Std.Error=Std.Error, df=df,
                         t.value=t.value, p_val_raw=p_val_raw)
-        }else if(method=="ptmixed"){
-          if(contrast_tf){
-            df=tryCatch({ptmixed::wald.test(x, L=contrast)},
-                              error = function(e) {
-                                data.frame(chi2=NA, df=NA, P=NA)
-                              })
-            names(df)[names(df)=="P"]<-"p_val_raw"
-            names(df)[names(df)=="chi2"]<-"Chisq"
-          }else{
-            df=tryCatch({summary(x, silent=T)$coefficients[coefficient,]},
-                              error = function(e) {
-                                c(Estimate=NA, "Std. error"=NA, z=NA, p.value=NA)
-                              })
-            names(df)[names(df)=="p.value"]<-"p_val_raw"
-            names(df)[names(df)=="Std. error"]<-"Std.Err"
-            names(df)[names(df)=="z"]<-"z-value"
-          }
         }else if(method=="nbmm_adq"){
           if(contrast_tf){
             df=tryCatch({
-              df=GLMMadaptive::anova(x, L=rbind(contrast))$aovTab.L
+              df=GLMMadaptive::anova(corrSeq_results[[x]], L=rbind(contrast))$aovTab.L
               colnames(df)[colnames(df)=="Pr(>|Chi|)"]<-"p_val_raw"
               df
             },error=function(e){
               data.frame(Chisq=NA, df=NA, p_val_raw=NA)
             })
 
+          }else if(reduced_tf){
+            df=tryCatch({
+              my_aov=GLMMadaptive::anova(corrSeq_results[[x]], corrSeq_results_reduced[[x]])
+              df=data.frame(LRT=my_aov$LRT, df=my_aov$df, p_val_raw=my_aov$p.value)
+              df
+            },error=function(e){
+              data.frame(LRT=NA, df=NA, p_val_raw=NA)
+            })
           }else{
-            df=summary(x)$coef_table[coefficient,]
+            df=summary(corrSeq_results[[x]])$coef_table[coefficient,]
             names(df)[names(df)=="p-value"]<-"p_val_raw"
           }
+        }else if(method=="nbmm_ml"&reduced_tf){
+          df=tryCatch({
+            my_aov=anova(corrSeq_results_reduced[[x]],corrSeq_results[[x]])
+            df=data.frame(LRT=my_aov$LRT, df=my_aov$Df[2], p_val_raw=my_aov$`Pr(>Chi)`[2])
+            df
+          },error=function(e){
+            data.frame(df=NA, p_val_raw=NA)
+          })
         }
         df
       })%>%dplyr::bind_rows()%>%
         dplyr::mutate(Gene=gene_names[idx_converged_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))
-        if(method!="ptmixed"&method!="nbmm_adq"){
+        if(method!="nbmm_adq"&!reduced_tf){
           ret=ret%>%dplyr::select(Gene, Estimate, Std.Error, df, t.value,
                                   p_val_raw, p_val_adj)
-        }else{
+        }else if(method=="nbmm_adq"){
           if(contrast_tf){
             ret=ret%>%dplyr::select(Gene, Chisq, df, p_val_raw, p_val_adj)
+          }else if(reduced_tf){
+            ret=ret%>%dplyr::select(Gene, LRT, df, p_val_raw, p_val_adj )
           }else ret=ret%>%dplyr::select(Gene, Estimate, Std.Err, "z-value", p_val_raw, p_val_adj)
+        }else if(method=="nbmm_ml"& reduced_tf){
+          ret=ret%>%dplyr::select(df, p_val_raw, p_val_adj )
         }
 
     }
@@ -318,12 +319,15 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     if(contrast_tf){
       ret2<-list(contrast_mat=contrast,summary_table = data.frame(ret),
                  p_adj_method = p_adj_method)
-    }else{
+    }else if(reduced_tf){
+      ret2<-list(summary_table = data.frame(ret),
+                 p_adj_method = p_adj_method)
+    } else{
       ret2 <- list(coefficient = coef_out,
                    summary_table = data.frame(ret),
                    p_adj_method = p_adj_method)
     }
-    if(method !="gee"&method!="ptmixed"){
+    if(method !="gee"){
       genes_singular_fits <- as.character(gene_names[idx_singular])
       genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
       ret2$singular_fits = genes_singular_fits
@@ -338,7 +342,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       dplyr::arrange(p_val_adj)
   }
   ret2$model_method=method
-  if(method!="ptmixed"|method!="nbmm_adq") ret2$df=df_name
+  if(method!="nbmm_adq") ret2$df=df_name
   rownames(ret2$summary_table)<-NULL
   return(ret2)
 }
