@@ -157,7 +157,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       })
       )
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
-      df_methods=c("containment", "residual")
+      df_methods=c("containment", "residual", NA)
     }else if(class(corrSeq_results[[idx_non_null_1]])=="MixMod"){
         method="nbmm_adq"
         coef_names=names(corrSeq_results[[idx_non_null_1]]$coefficients)
@@ -252,10 +252,10 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
           Estimate=summary(corrSeq_results[[x]])$coefficient[coefficient, "Estimate"]
           Std.Error=summary(corrSeq_results[[x]])$coefficient[coefficient, "Std. Error"]
         }
-        if(!is.numeric(df)&method!="nbmm_adq"){
+        if(!is.numeric(df)&!is.na(df)&method!="nbmm_adq"){
           df=calc_df(model=corrSeq_results[[x]], df=df, method=method)
         }
-        if(method!="nbmm_adq"){
+        if(method!="nbmm_adq"&!reduced_tf){
           t.value=Estimate/Std.Error
           p_val_raw=2*pt(-abs(t.value),
                          df=df)
@@ -286,7 +286,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         }else if(method=="nbmm_ml"&reduced_tf){
           df=tryCatch({
             my_aov=anova(corrSeq_results_reduced[[x]],corrSeq_results[[x]])
-            df=data.frame(LRT=my_aov$LRT, df=my_aov$Df[2], p_val_raw=my_aov$`Pr(>Chi)`[2])
+            df=data.frame(df=my_aov$Df[2], p_val_raw=my_aov$`Pr(>Chi)`[2])
             df
           },error=function(e){
             data.frame(df=NA, p_val_raw=NA)
@@ -305,7 +305,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
             ret=ret%>%dplyr::select(Gene, LRT, df, p_val_raw, p_val_adj )
           }else ret=ret%>%dplyr::select(Gene, Estimate, Std.Err, "z-value", p_val_raw, p_val_adj)
         }else if(method=="nbmm_ml"& reduced_tf){
-          ret=ret%>%dplyr::select(df, p_val_raw, p_val_adj )
+          ret=ret%>%dplyr::select(Gene,df, p_val_raw, p_val_adj )
         }
 
     }
