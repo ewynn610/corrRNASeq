@@ -32,15 +32,9 @@ glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
 #############################################################
 #' Pseudo-Likelihood Negative Binomial Mixed Model
 #'
-#' This function to fits a negative binomial mixed model using a
+#' This function fits a negative binomial mixed model using a
 #' psuedo-likelihood approach
 #'
-#' This function is similar to the function \code{\link[NBZIMM]{glmm.nb}}
-#' from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest} package
-#' rather than \pkg{nlme} package and returns and object compatible with the \pkg{pkrtest} package
-#' which allows for the calculation of Kenward-Roger degrees of freedom.
-#' (see \code{\link[pbkrtest]{krmodcomp}},
-#' \code{\link[lmerTest]{contest.lmerModLmerTest}})
 #'
 #' @return An object of class \code{\link{glmm_nb_mod}}
 #'
@@ -52,6 +46,13 @@ glmm_nb_mod<-setClass("glmm_nb_mod", contains = c("lmerModLmerTest"),
 #' @param epsilon	Positive convergence tolerance.
 #' @param verbose Logical. Should the number of iterations and computational time be printed?
 #' @param REML Logical. Should the models be fit with REML or regular ML?
+#'
+#' @details #' This function is similar to the function \code{\link[NBZIMM]{glmm.nb}}
+#' from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest} package
+#' rather than \pkg{nlme} package and returns and object compatible with the \pkg{pkrtest} package
+#' which allows for the calculation of Kenward-Roger degrees of freedom.
+#' (see \code{\link[pbkrtest]{krmodcomp}},
+#' \code{\link[lmerTest]{contest.lmerModLmerTest}})
 #'
 #' @author Elizabeth Wynn and Camille Moore, underlying code drawn from code by \pkg{NBZIMM}-authors.
 #'
@@ -86,9 +87,7 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = FA
 
   m <- mcall <- Call <- match.call()
 
-  #Seems unnecessary
-  # CMM: I'm also not so sure what this is doing...probably something with keeping names for the model output
-  # we might figure it out when we use the function more
+
   nm <- names(m)[-1L]
   keep <- is.element(nm, c("weights", "data", "subset", "na.action")) #?
   for (i in nm[!keep]) m[[i]] <- NULL
@@ -204,7 +203,7 @@ glmm_nb_lmer<-function (formula, data, niter = 40, epsilon = 1e-08, verbose = FA
     # new model linear predictors (fixed effects only)
     eta_fixed <- X%*%attributes(fit)$beta + off
 
-    #Next to lines deal with negbin function, don't understand
+
     # CMM: These lines calculate the expected value for each observation based on the model and the variance
     # uses formulas from the negative binomial distribution
 

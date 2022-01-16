@@ -1,5 +1,5 @@
 ---
-title: "corrRNASeq: Model Fitting for Correlated RNA-Seq Count Data"
+title: "corrRNASeq: Model Fitting for Correlated RNA-seq Count Data"
 author: "Elizabeth Wynn"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -17,16 +17,16 @@ knitr::opts_chunk$set(
 ```
 
 
-As the cost of RNA-sequencing (RNA-Seq) decreases, complex study designs, including paired, longitudinal, and other correlated designs, become increasingly feasible. Because many commonly used RNA-Seq analysis tools do not allow for correlation between observations, analyzing correlated RNA-Seq experiments with packages such as ```edgeR``` or ```DESeq2``` can lead to misleading inference. Instead, common statistical methods that can account for correlation, such as mixed effects models or generalized estimating equation (GEE) methods can be used. Because RNA-Seq data are overdispersed counts, these analysis methods must also account for the non-normality of the data. Four methods that account for correlated data and may also be suited for overdispersed count data are: generalized estimating equations (GEE), negative binomial mixed models using either a pseudo-likelihood approach or a maximum likelihood approach (NBMM-PL and NBMM-ML), and linear mixed models (LMM) after taking a normalizing transformation of the count data. In this R package, we provide some convenient wrapper functions to fit these four types of models  and obtain results tables in a similar spirit to the ```edgeR``` or ```DESeq2``` analysis pipelines. Additionally, results can be summarized using various degrees of freedom estimation methods.
+As the cost of RNA-sequencing (RNA-seq) decreases, complex study designs, including paired, longitudinal, and other correlated designs, become increasingly feasible. Because many commonly used RNA-seq analysis tools do not allow for correlation between observations, analyzing correlated RNA-seq experiments with packages such as ```edgeR``` or ```DESeq2``` can lead to misleading inference. Instead, common statistical methods that can account for correlation, such as mixed effects models or generalized estimating equation (GEE). Because RNA-seq data are overdispersed counts, these analysis methods must also account for the non-normality of the data. Five methods that account for correlated data and may also be suited for overdispersed count data are: generalized estimating equations (GEE), negative binomial mixed models using a pseudo-likelihood approach (NBMM-PL), a maximum likelihood approach with a Laplace approximation (NBMM-LP), or a maximum likelihood approach with adaptive Gaussian quadrature (NBMM-AGQ), and linear mixed models (LMM) after taking a normalizing transformation of the count data. In this R package, we provide some convenient wrapper functions to fit these five types of models  and obtain results tables in a similar spirit to the ```edgeR``` or ```DESeq2``` analysis pipelines.
 
 ## Method Descriptions
 
-Below is a brief description of four different methods that can be used to fit models to RNA-Seq data (or other overdispersed count data) in this package
+Below is a brief description of five different methods that can be used to fit models to RNA-seq data (or other overdispersed count data) in this package.
 
 ### Generalized Estimating Equations (GEE)
-Generalized estimating equations (GEE) are a semi-parametric extension of GLM that can account for correlation between observations. In these models, the marginal mean of the response (i.e. gene counts for RNA-Seq data) is modeled using specified covariates (ex. treatment group), using a link function. In the case of RNA-Seq data, a use a Poisson distribution with an extra scale parameter in the variance to account for overdispersion to model the data. A working correlation structure (ex. exchangeable, AR1, etc.), which describes the relationship between observations within a subject, must also be specified and robust (Sandwich) estimators are used so that that estimates are robust to misspecification of the correlation structure. For more information about GEE models, see @Liang1986.
+Generalized estimating equations (GEE) are a semi-parametric extension of GLM that can account for correlation between observations. In these models, the marginal mean of the response (i.e. gene counts for RNA-seq data) is modeled using specified covariates (ex. treatment group), using a link function. In the case of RNA-seq data, we use a Poisson distribution with an extra scale parameter in the variance to account for overdispersion to model the data. A working correlation structure (ex. exchangeable, AR1, etc.), which describes the relationship between observations within a subject, must also be specified and robust (Sandwich) estimators are used so that that estimates are robust to misspecification of the correlation structure. For more information about GEE models, see @Liang1986.
 
-GEE sandwich estimators can have poor performance at small sample sizes, to combat this, we include the three small sample adjustment options when fitting GEE models:
+GEE sandwich estimators can have poor performance at small sample sizes. To combat this, we include the three small sample adjustment options when fitting GEE models:
 
 * **Pan's Method**: The subject-specific covariance matrices, which are used to estimate the sandwich estimators, are each estimated using information from all subjects, rather than just one individual subject. See @Pan2001 for more information.
 * **Mancl and DeRouen's Method**: The covariance estimates are adjusted to correct for bias. See @Mancl2001.
@@ -35,43 +35,55 @@ GEE sandwich estimators can have poor performance at small sample sizes, to comb
 This package contains a custom function, ```geeglm_small_samp```, which combines the model fitting capability of the ```geeglm``` function from the ```geepack``` package with the small sample adjustment method capabilities of the ```geesmv``` package. This function is used within wrapper functions to fit GEE models.
 
 ### Negative Binomial Mixed Models (NBMM)
-Negative binomial mixed models are a class of generalized linear mixed models that use random effects to account for correlation in the data and a negative binomial distribution to model overdispersed counts. This package allows for NBMMs to be fit using two different methods:
+Negative binomial mixed models are a class of generalized linear mixed models that use random effects to account for correlation in the data and a negative binomial distribution to model overdispersed counts. This package allows for NBMMs to be fit using three different methods:
 
-* **Maximum Likelihood Approach (NBMM-ML)**: Maximum likelihood model estimates are obtained using automatic differentiation approximation via the ```glmmADMB``` package.
-* **Pseudolikelihood approach (NBMM-PL)**: Linearized "pseudo-data" and model weights are computed and then used to fit weighted linear mixed models. Pseudo-data and weights are re-computed, and the process is repeated until convergence. See @Zhang2017 for more information. The function ```glmm_nb_lmer```, available in this package, can be used to fit individual NBMM-PL models. This function is utilized in wrapper functions to fit models for entire RNA-Seq datasets. 
+* **Maximum Likelihood Approach, Laplace Approximation (NBMM-LP)**: Maximum likelihood model estimates using a Laplace approximation are obtained using automatic differentiation approximation via the ```glmmADMB``` package.
+* **Maximum Likelihood Approach, Adaptive Gaussian Quadrature (NBMM-AGQ)**: Maximum likelihood model estimates using adaptive Gaussian quadrature are obtained via the ```GLMMadaptive``` package. More details on this approximation technique and its application to RNA-seq data can be found in @Tsonaka2021.
+* **Pseudolikelihood approach (NBMM-PL)**: Linearized "pseudo-data" and model weights are computed and then used to fit weighted linear mixed models. Pseudo-data and weights are re-computed, and the process is repeated until convergence. See @Zhang2017 for more information. The function ```glmm_nb_lmer```, available in this package, can be used to fit individual NBMM-PL models. This function is utilized in wrapper functions to fit models for entire RNA-seq datasets. 
 
 ### Linear Mixed Models (LMM)
-Linear Mixed Models (LMM) employ random effects to model correlated data, but assumes a normal distribution. This method can be used for correlated RNA-Seq data if we first apply a normalizing transformation, such as the variance-stabilizing transformation (VST) in the ```DESeq2``` package. To apply this method to RNA-Seq data we utilize the ```lmerSeq``` package, available at https://github.com/stop-pre16/lmerSeq, which provides wrappers and summary functions for fitting LMMs to normalized RNA-Seq data.
+Linear Mixed Models (LMM) employ random effects to model correlated data, but assume a normal distribution. This method can be used for correlated RNA-seq data if we first apply a normalizing transformation, such as the variance-stabilizing transformation (VST) in the ```DESeq2``` package. To apply this method to RNA-seq data we utilize the ```lmerSeq``` package, available at https://github.com/stop-pre16/lmerSeq, which provides wrappers and summary functions for fitting LMMs to normalized RNA-seq data.
 
-## Degrees of Freedom Methods
-In performing hypothesis testing on individual regression coefficients, t-tests can be used to asses significance and there are several degrees of freedom approximation methods that can be used in these t-tests. This package offers four different options for computing the degrees of freedom.
+## Hypothesis Testing
+Through this package, users can perform hypothesis tests for single coefficients or single row contrasts (single degree of freedom tests) or multi-line contrasts (multiple degree of freedom tests). Each method utilizes different types of both single DF and multiple DF tests.
 
-### Residual 
-Let $n$ be the total of number of subjects, $m$ be the number of observations per subject and $\mathbf{X}$ be the fixed effects design matrix. Then $nm$ is equal to the total number of observations in the dataset and, the DF are approximated using $nm-Rank(\mathbf{X})$.
+### Degrees of Freedom (DF) Methods
+Methods that use t- or F-tests require the user to specify the degrees of freedom approximation methods to be used. This package offers four different options for computing the degrees of freedom.
 
-### Containment
-The containment method is a more conservative DF approximation than that of the residual method. Let $n$, $m$, and $\mathbf{X}$ have the same definitions as above and $\mathbf{Z}$ represents the random effects design matrix. Then, the DF approximation using the containment method is $nm-Rank(\mathbf{X},\mathbf{Z})$.
+* **Residual**: Let $n$ be the total number of subjects, $m$ be the number of observations per subject and $\mathbf{X}$ be the fixed effects design matrix. Then $nm$ is equal to the total number of observations in the dataset and, the DF are approximated using $nm-Rank(\mathbf{X})$.
 
-### Satterthwaite
-This method uses Satterthwaite's method of moments technique to approximate the degrees of freedom. In the context of RNA-Seq experiments, unlike the residual and containment methods, a different degree of freedom value is estimated for each model (gene). This method is only available for data fit using LMM (on transformed data) and NBMM-PL and is implemented using the ```lmerTest``` package. See @Giesbrecht1985 for more information.
+* **Containment**: The containment method is a more conservative DF approximation than that of the residual method. Let $n$, $m$, and $\mathbf{X}$ have the same definitions as above and $\mathbf{Z}$ represents the random effects design matrix. Then, the DF approximation using the containment method is $nm-Rank(\mathbf{X},\mathbf{Z})$.
 
-### Kenward-Roger
+* **Satterthwaite**: This method uses Satterthwaite's method of moments technique to approximate the degrees of freedom. In the context of RNA-seq experiments, unlike the residual and containment methods, a different degree of freedom value is estimated for each model (gene). This method is only available for data fit using LMM (on transformed data) and NBMM-PL and is implemented using the ```lmerTest``` package. See @Giesbrecht1985 for more information.
 
-The Kenward-Roger approach builds off Satterthwaite's method, but includes modifications to make it more robust to small sample sizes. This method is only available for data fit using LMM (on transformed data) and NBMM-PL and is implemented using the ```pbkrtest``` package (with slight modification for NBMM-PL models). See @Kenward1997 for more information. 
+* **Kenward-Roger**: The Kenward-Roger approach builds off Satterthwaite's method, but includes modifications to make it more robust to small sample sizes. This method is only available for data fit using LMM (on transformed data) and NBMM-PL and is implemented using the ```pbkrtest``` package (with slight modification for NBMM-PL models). See @Kenward1997 for more information.
+
+### Summary of Hypothesis Testing for Each Method
+The table below shows the type of hypothesis tests used and the DF methods available for each method.
+
+| Method       | Single DF Test | Multiple DF Test | DF Methods 
+| :-------------- | :-----------------| :-----------------| :----------------------------| 
+|gee | t-test | Wald test |containment or residual; Only applicable for single DF tests|
+|lmm | t-test | F-test | containment, residual, ,Kenward-Roger or Satterthwaite; For multiple DF tests only Kenward-Roger or Satterthwaite|
+|nbmm_agq| LRT or Wald test | LRT or Wald test| Not applicable |
+|nbmm_lp| t-test | LRT | containment or residual; Only applicable for single DF tests |
+|nbmm_pl| t-test | F-tesst | containment, residual, ,Kenward-Roger or Satterthwaite; For multiple DF tests only Kenward-Roger or Satterthwaite |
+
+
 
 
 ## Overview of Functions in the corrRNASeq Package
-The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, which is used to fit models using any of the methods previously outlined, and ```corrSeq_summary```, which is used to summarize individual regression coefficients and perform hypothesis testing using any of the previously outlined degrees of freedom methods. These functions have several required arguments and options which are described below.
+The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, which is used to fit models using any of the methods previously outlined, and ```corrSeq_summary```, which is used to perform hypothesis testing and summarize the results. These functions have several required arguments and options which are described below.
 
 ### corrSeq_fit
 #### _Required Arguments_
 
 | Argument       | Description | 
 | :-------------- | :---------------------------------------------------| 
-| formula         | A one-sided linear formula describing the model effects of the model. For ```method="lmm"```, ```method="nbmm_pl"``` and ```"nbmm_ml"```, random effects should be included in the formula using the syntax of the lme4 package. |        
-| expr_mat  | A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For ```method="gee"```, ```method="nbmm_pl"``` and ```method="nbmm_ml"```, the matrix should contain raw counts and for ```method="lmm"``` the matrix should contain transformed counts (e.g. using VST from ```DESeq2```). G = number of genes.  N = number of samples. | 
+| formula         | A one-sided linear formula describing the model variables. For models that include them, random effects should be included in the formula using the syntax of the lme4 package.|        
+| expr_mat  | A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For ```method="gee"```, ```method="nbmm_pl"```, ```method="nbmm_lp"```, and ```method="nbmm_agq"```, the matrix should contain raw counts and for ```method="lmm"``` the matrix should contain transformed counts (e.g. using VST from ```DESeq2```). G = number of genes.  N = number of samples. | 
 | sample_data    | Data frame with N rows containing the fixed- and random-effects terms included in the formula.  The rows of the data frame must correspond (and be in the same order as) the columns of the expression matrix.|
-| method | Method to use to fit the models. Possible options are ```"lmm"```, ```"gee"```, ```"nbmm_pl"``` and ```"nbmm_ml"```.|
+| method | Method to use to fit the models. Possible options are ```"lmm"```, ```"gee"```, ```"nbmm_pl"``` , ```"nbmm_lp"``` and ```nbmm_agq```.|
 |id | Only applicable for models fit using the ```method="gee"``` method. A vector or data column name which identifies the clusters. The length of ‘id’ should be the same as the number of observations. Data are assumed to be sorted so that observations on each cluster appear as contiguous rows in data. If data is not sorted this way, the function will not identify the clusters correctly. If ```sort=TRUE``` (default), the dataframe from the ```data``` argument is sorted by the id column to avoid this issue.|
 
 
@@ -81,9 +93,9 @@ The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, wh
 | :---------------------- | :--------------------------------------------------- | :----------------|
 | gene_names         | An optional character vector of gene names (length G). | ```NULL``` | 
 | small.samp.method| Only applicable for models fit using the ```method="gee"``` method. A character string specifying the small sample method. The following are permitted: ```"pan"``` for the @Pan2001 method, ```"md"``` for the @Mancl2001 method, and ```"wl```" for the @Wang2011 method. If ```small.samp.method``` is ```NULL```, small sample variance estimates are not computed.| ```NULL``` 
-| parallel        |If on Mac or Linux, use forking (via mclapply) to parallelize fits.| ```FALSE``` |
+| parallel        |A logical variable indicating whether forking (via mclapply) should be used to parallelize fits. Only available on Mac or linux machines.| ```FALSE``` |
 | cores        | Number of cores to use if using parallelizing fits. | 2 |
-|...|additional arguments passed on to ```lmer``` (```method="lmm"```), ```gee_small_sample```, (```method="lmm"```),```glmm_nb_lmer``` (```method="nbmm_pl"```) or ```glmmadmb``` (```method="nbmm_ml"```)| ```NULL```|
+|...|additional arguments passed on to ```lmer``` (```method="lmm"```), ```gee_small_sample```, (```method="lmm"```),```glmm_nb_lmer``` (```method="nbmm_pl"```) , ```mixed_model```(```method="nbmm_agq```) or ```glmmadmb``` (```method="nbmm_lp"```)| ```NULL```|
 
 ### corrSeq_summary
 #### _Required Arguments_
@@ -99,12 +111,13 @@ The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, wh
 
 | Option               | Description                                         | Default |
 | :---------------------- | :--------------------------------------------------- | :----------------|
+|corrSeq_results_reduced | Results object from corrSeq_fit containing reduced models for LRT tests. Only applicable for ```nbmm_agq``` models or when using multi-row contrasts (matrix) for nbmm_lp models. |
 | p_adj_method        | Method for adjusting for multiple comparisons. See ```p.adjust.methods``` from the ```stats``` package. | ```"BH"```| 
-| df        | Degrees of freedom method for computing degrees of freedom and t-statistics. The options ```"Satterthwaite"``` and ```"Kenward-Roger"``` can only be used for models fit using ```"nbmm_pl"``` or ```"lmm"```. Options ```"containment"``` and ```"residual"``` can be used for models fit using any method. Alternatively, a single numeric value representing the df for all tests can also be given.| ```"residual"``` |
+| df        | Method for computing degrees of freedom for t- and F-tests. The options ```"Satterthwaite"``` and ```"Kenward-Roger"``` can only be used for models fit using ```nbmm_pl``` or ```lmm```. Options ```"containment"``` and ```"residual"``` can be used for models fit using any method except ```nbmm_agq``` (which does not use degrees of freedom, so use ```df=NA```). Alternatively, a single numeric value representing the df for all tests can also be given. If testing a multi-row contrast for ```nbmm_lp```, ```nbmm_agq```, or ```gee```, use ```df=NA``` since these tests do not use degrees of freedom. If using a multi-row contrast for ```nbmm_pl``` or ```lmm```, only ```df="Satterthwaite"``` and ```df="Kenward-Roger"``` are available.| ```"residual"``` |
 | sort_results        |Should the results table be sorted by adjusted p-value? | ```TRUE```|
 
 ## An Example corrRNASeq Analysis
-We will perform an analysis using data simulated from a negative binomial distribution. This dataset is included in the package and contains expression data for 6 subjects (ids 1 to 6): 3 control subjects (group = 0) and 3 treatment subjects (group = 1). All subjects are measured at 2 timepoints, baseline (time = 0) and follow-up (time = 1).  A total of 15,049 genes are included in this dataset, around 20\% of which were simulated to have changes in expression from baseline to follow up in the treatment group only. For this analysis, we will subset the data to the first 100 genes. First load the data:
+We will perform an analysis using data simulated from a negative binomial distribution. This dataset is included in the package and contains expression data for 6 subjects (ids 1 to 6): 3 control subjects (group = 0) and 3 treatment subjects (group = 1). All subjects are measured at 4 timepoints, (time=0 to 3).  A total of 14,561 genes are included in this dataset, around 20\% of which were simulated to have changes in expression across time in the treatment group only. For this analysis, we will subset the data to the first 50 genes. First load the data:
 
 ```{r}
 # Load the library
@@ -122,56 +135,28 @@ sample_meta_data <- simdata$metadata
 sample_meta_data
 
 # The expression matrix (counts) has the same number of columns as
-# rows in metadata.  The columns of the counts matrix
+# rows in metadata.  The columns of the count matrix
 # are in the same order as the rows of the metadata.
-# Subset to include 100 genes
-counts <- simdata$counts[1:100,]
+# Subset to include 50 genes
+counts <- simdata$counts[1:50,]
 head(counts)
 
 # The vst_expr object is the transformed expression matrix
 # It was created using the vst function from DESeq2
 # We will use this transformed data for the LMM method
-# Subset to contain 100 genes
-vst_expr<-simdata$vst_expr[1:100,]
+# Subset to contain 50 genes
+vst_expr<-simdata$vst_expr[1:50,]
 head(vst_expr)
 
 
 
 ```
-The goal of our analysis will be to compare changes over time between the control and treatment groups. We will do this using all four types of the modelling methods. For the mixed models, will use a random intercept and no other random effects. Because of the structural and distributional differences between the methods, the framework of these models will each be different. We outline the model frameworks for each method used in this analysis below.
+The goal of our analysis will be to compare changes over time between the control and treatment groups. We will do this using all five modelling methods. We will fit models where both group and time are categorical and include fixed effects for group, time, and an interaction between group and time. For the mixed models, we will use a random intercept and no other random effects.
 
-### GEE
-If $Y_{gij}$ is the read count for gene $g$, subject $i$, timepoint $j$, then assuming $Y_{gij}$ has a Poisson distribution with an extra scale parameter, $\phi_g$ in the variance to account for overdispersion:
-\begin{eqnarray}
-\label{eq:gee}
-E(Y_{gij})&=&\mu_{gij}, Var(Y_{gij})=\mu_{gij}\phi_g  \\
-\mu_{gij} &=& \beta_{g0} + \beta_{g1} I_{T_i} + \beta_{g2} I_{F_{ij}} + \beta_{g3}I_{T_i} I_{F_{ij}} + \rho_{ij}
-\end{eqnarray}
-where $I_{T_i}$ is an indicator function that equals 1 if subject $i$ is in the treatment group, and $I_{F_{ij}}$ is a similar indicator for if observation $j$ is the follow-up. The $\boldsymbol{\beta}_g$ parameters are model coefficients and $\rho_{ij}$ is an offset to account for differences in sequencing depth.
 
-### NBMM
-The model framework for both types of NBMM models are the same, though the parameter estimation differs. Using the same notation as above, the model can be written:
-\begin{eqnarray}
-\label{eq:nbmm}
-Y_{gij} &\sim& \mathcal{NB}(\mu_{gij}, \alpha_g) \nonumber \\
-\log(\mu_{gij}) &=& \beta_{g0} + \beta_{g1} I_{T_i} + \beta_{g2} I_{F_{ij}} + \beta_{g3}I_{T_i} I_{F_{ij}} + b_{gi} + \rho_{ij} \nonumber \\
-b_{gi} &\sim& \mathcal{N}(0, \sigma_{gb}^2) \nonumber
-\end{eqnarray}
-Here, $\alpha_g$ is the dispersion parameter for the negative binomial distribution, $b_{gi}$ is the random intercept, and $\sigma_{gb}^2$ is the random intercept variance.
-
-### LMM
-Using the LMM method, we need normalized count data. Let $V_{gij}$ be the normalized expression value for gene $g$, subject $i$, and timepoint $j$ that results from applying a normalizing transformation to the count matrix $\mathbf{Y}$ (we use a variance stabilizing transformation for this analysis). Then
-\begin{eqnarray}
-\label{eq:sim_data}
-V_{gij} &\sim& \mathcal{N}(\mu_{gij}, \sigma_g^2) \\
-\mu_{gij} &=& \beta_{g0} + \beta_{g1} I_{T_i} + \beta_{g2} I_{F_{ij}} + \beta_{g3}I_{T_i} I_{F_{ij}} + b_{gi}  \nonumber \\
-b_{gi} &\sim& \mathcal{N}(0, \sigma_{gb}^2) \nonumber
-\end{eqnarray}
-
-where $\sigma_g^2$ is the gene-specific variance for our outcome of interest.
 
 ### Fitting the Models
-To fit models using each of the methods, we use the ```corrSeq_fit``` function. The ```method``` argument is used to specify one of the four model fitting methods (```"gee"```, ```"nbmm_ml"```, ```"nbmm_pl"``` or ```"lmm"```) The ```expr_mat``` argument takes a data frame or matrix of RNA-Seq expression data, the columns of which must be in the same order as the rows of ```sample_data``` data frame, which contains metadata on each sample.  The model formula is passed to the ```formula``` argument as a one sided formula with the model effects, which must be included in the ```sample_data``` data frame. Offset terms may also be included in the model formula. By default, the ```corrSeq_fit``` will use rownames of the counts matrix to identify genes.  If you would like to use a different set of gene names, you can supply a character vector of names in the same order as the rows of the counts matrix to the gene_names option. For models fit using ```method="gee"```, the ```id``` argument must be specified either with a vector identifying the cluster/subject for each sample, or a column name for a column of ids in the ```sample_data``` data frame. Additionally for ```method="gee"```, a small sample adjustment method can be specified using the ```small.samp.method``` option. If you are using Mac or Linux and would like to use use forking (via ```mclapply```) to parallelize fits, the ```parallel``` argument should be set to ```TRUE``` and the number of cores to be used should be passed to the ```cores``` argument. Finally, additional arguments  to be passed to the functions used to fit individual models ( ```lmer``` (method="lmm"), ```gee_small_sample```, (method="lmm"),```glmm_nb_lmer``` (method="nbmm_pl") or ```glmmadmb``` (method="nbmm_ml")) can also be specified.
+To fit models using each of the methods, we use the ```corrSeq_fit``` function. The ```method``` argument is used to specify one of the five model fitting methods (```"gee"```, ```"nbmm_lp"```, ```"nbmm_pl"```, ```nbmm_agq``` or ```"lmm"```) The ```expr_mat``` argument takes a data frame or matrix of RNA-seq expression data, the columns of which must be in the same order as the rows of the ```sample_data``` data frame, which contains metadata on each sample.  The model formula is passed to the ```formula``` argument as a one sided formula with the model effects, which must be included in the ```sample_data``` data frame. Offset terms may also be included in the model formula. By default, ```corrSeq_fit``` will use rownames of the count matrix to identify genes.  If you would like to use a different set of gene names, you can supply a character vector of names in the same order as the rows of the count matrix to the gene_names option. For models fit using ```method="gee"```, the ```id``` argument must be specified either with a vector identifying the cluster/subject for each sample, or a column name for a column of ids in the ```sample_data``` data frame. Additionally for ```method="gee"```, a small sample adjustment method can be specified using the ```small.samp.method``` option. If you are using Mac or Linux and would like to use use forking (via ```mclapply```) to parallelize fits, the ```parallel``` argument should be set to ```TRUE``` and the number of cores to be used should be passed to the ```cores``` argument. Finally, additional arguments  to be passed to the functions used to fit individual models ( ```lmer``` (method="lmm"), ```gee_small_sample```, (method="lmm"), ```glmm_nb_lmer``` (method="nbmm_pl") or ```glmmadmb``` (method="nbmm_lp")) can also be specified.
 
 ```{r}
 #########  Fit the Models for each method ###############
@@ -191,12 +176,19 @@ nbmm_pl_fit <- corrSeq_fit(formula = ~ group *time+
                            sample_data = sample_meta_data,
                            method="nbmm_pl")
 
-## Fit NBMM-ML models
+## Fit NBMM-AGQ models
+nbmm_agq_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
+                           expr_mat = counts,
+                           sample_data = sample_meta_data,
+                           method="nbmm_agq")
+
+## Fit NBMM-LP models
 ## Random effects must be factors
 sample_meta_data$ids<-factor(sample_meta_data$ids)
-nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),expr_mat = counts,
+nbmm_lp_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
+                           expr_mat = counts,
                            sample_data = sample_meta_data,
-                           method="nbmm_ml")
+                           method="nbmm_lp")
 
 ##  Fit LMM Models
 ## Use VST expression data instead of raw counts
@@ -216,58 +208,80 @@ length(gee_fit)
 # Class for an individual element from each object
 class(gee_fit$gene_1)
 class(nbmm_pl_fit$gene_1)
-class(nbmm_ml_fit$gene_1)
+class(nbmm_agq_fit$gene_1)
+class(nbmm_lp_fit$gene_1)
 class(lmm_fit$`gene_ 1`$fit)
 
 ```
-The resulting object for each method is a list with elements for every gene in the expression matrix. Each gene element contains a model object who's class is dependent on the model fitting method. If the ```gee``` method was used, each gene object is of the ```geeglm``` class with an additional item for the small sample variance if a small sample method was specified (see ```geepack``` package and ```geeglm_small_samp``` function documentation). NBMM-PL model objects are of the class ```glmm_nb_mod```, NBMM-ML models are of the class (see ```glmmADMB``` package), and LMM models are of the class ```lmerModLmerTest``` (see ```lmerTest``` package).
+The resulting object for each method is a list with elements for every gene in the expression matrix. Each gene element contains a model object whose class is dependent on the model fitting method. If the ```gee``` method was used, each gene object is of the ```geeglm``` class with an additional item for the small sample variance, if a small sample method was specified (see ```geepack``` package and ```geeglm_small_samp``` function documentation). NBMM-PL model objects are of the class ```glmm_nb_mod```, NBMM-LP models are of the class (see ```glmmADMB``` package), LMM models are of the class ```lmerModLmerTest``` (see ```lmerTest``` package), and NBMM-AGQ model objects are of the class ```MixMod``` (see ```GLMMadaptive``` package).
 
 ### Summarizing Results
-Model coefficients can be more easily summarized with the ```lmSeq.summary``` function, which calculates and tabulates degrees of freedom and adjusted p-values, as well as other results. The coefficient of interest can be passed to the function either as a numeric indicator or character string. In calculating adjusted p-values, you can choose between various adjustment methods (see ```p.adjust.methods)``` and four degrees of freedom methods (residual, containment, Satterthwaite, or Kenward-Roger; latter two methods only available for NBMM-PL and LMM models). The resulting table can also be sorted by adjusted p-value by setting the ```sort_results``` option to ```TRUE```.
+Hypothesis tests can be run and summarized with the ```corrSeq_summary``` function, which calculates and tabulates degrees of freedom and adjusted p-values, as well as other results. A coefficient of interest can be passed to the function either as a numeric indicator or character string. Alternatively, a contrast can be specified as a vector (single DF test) or matrix (multi-DF test) with the number of columns equal to the number of coefficients in the model. For methods using LRT tests, an object containing reduced models for each gene can be supplied.  In calculating adjusted p-values, you can choose between various adjustment methods (see ```p.adjust.methods)``` and four degrees of freedom methods (residual, containment, Satterthwaite, or Kenward-Roger; not used for LRT or Wald tests). The resulting table can also be sorted by adjusted p-value by setting the ```sort_results``` option to ```TRUE```.
 
 ```{r}
-##  Summarize group effect for GEE models using residual DF
-gee_sum_group <-corrSeq_summary(corrSeq_results = gee_fit,
-                                coefficient = "group",
+##  Test for differences in treatment group at baseline using GEE models and residual DF
+gee_sum <-corrSeq_summary(corrSeq_results = gee_fit,
+                                coefficient = "group1",
                                 p_adj_method = 'BH',
                                 df = 'residual',
                                 sort_results = T)
 
-##  Summarize group effect for NBMM-ML models using containment DF
+##  Test for differences between baseline and time 1 in control group with NBMM-LP model
 ## Use coefficient number instead of name
-nbmm_ml_sum_group <-corrSeq_summary(corrSeq_results = nbmm_ml_fit,
+nbmm_lp_sum <-corrSeq_summary(corrSeq_results = nbmm_lp_fit,
                                     coefficient = 2,
                                     p_adj_method = 'BH',
-                                    df = 'residual',
+                                    df = 'containment',
                                     sort_results = T)
 
-## Summarize interaction effect for NBMM-PL models 
+## Test for differential expression between groups at any timepoint with NBMM-PL model
 ## using Satterthwaite DF
-nbmm_pl_sum_inter <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
-                                    coefficient = 4,
+contrast_mat<-rbind(c(0, 1, 0, 0, 0, 0, 0, 0), 
+                    c(0, 1, 0, 0, 0, 1, 0, 0), 
+                    c(0, 1, 0, 0, 0, 0, 1, 0),
+                    c(0, 1, 0, 0, 0, 0, 0, 1)
+                    )
+nbmm_pl_sum<-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
+                                    contrast = contrast_mat,
                                     p_adj_method = 'BH',
                                     df = 'Satterthwaite',
                                     sort_results = T)
 
-## Summarize time effect for LMM models 
-## using Kenward-Roger DF
-lmm_sum_time <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
-                               coefficient = "time",
+## Test for interaction effect between any group or timepoint with NBMM-AGQ model
+## using LRT test
+reduced_mods<-corrSeq_fit(formula = ~ group+time+(1|ids)+offset(log_offset),
+                           expr_mat = counts,
+                           sample_data = sample_meta_data,
+                           method="nbmm_agq")
+nbmm_agq_sum<-corrSeq_summary(corrSeq_results = nbmm_agq_fit,
+                                    corrSeq_results_reduced = reduced_mods,
+                                    p_adj_method = 'BH',
+                                    df = NA,
+                                    sort_results = T)
+
+## Test if there is differential expression between any timepoints in the treatment group
+## Use LMM model and Kenward-Roger DF
+contrast_mat=rbind(c(0, 0, 1,  0,  0,  1,  0,  0), 
+           c(0, 0, 0,  1,  0,  0,  1,  0), 
+           c(0, 0, 0,  0,  1,  0,  0,  1))
+
+lmm_sum <-corrSeq_summary(corrSeq_results = lmm_fit,
+                               contrast = contrast_mat,
                                p_adj_method = 'BH',
-                               df = 'Satterthwaite',
+                               df = 'Kenward-Roger',
                                sort_results = T)
 
 
 #Look at one of the summary objects
-names(nbmm_pl_sum_inter)
+names(nbmm_pl_sum)
 
 #Look at singular fits item
-nbmm_pl_sum_inter$singular_fits
+nbmm_pl_sum$singular_fits
 
 #Look at summary table
-head(nbmm_pl_sum_inter$summary_table)
+head(nbmm_pl_sum$summary_table)
 ```
 
-Along with information about the function call, the resulting summary object contains a list of genes whose corresponding models were singular, and a summary table. For each gene, the summary table displays the model estimate, standard error, degrees of freedom, t-value, and raw and adjusted p-values. Values for genes with singular models or models that did not converge are marked ```NA```.
+Along with information about the function call, the resulting summary object contains a list of genes whose corresponding models were singular, and a summary table. For each gene, the summary table displays the model estimates and testing information as well as raw and adjusted p-values. Values for genes with singular models or models that did not converge are marked ```NA```.
 
 ## References

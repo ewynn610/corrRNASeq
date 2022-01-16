@@ -1,17 +1,29 @@
 #' Function to summarize individual regression coefficients
 #'
-#' Conducts t-tests on individual regression coefficients from models fit from the \code{\link{corrSeq_fit}} function.
+#' Conducts hypothesis testing on models fit using the \code{\link{corrSeq_fit}} function.
 #'
-#' @param corrSeq_results Results object from running \code{\link{corrSeq_fit}}.
+#' @param corrSeq_results Results object from \code{\link{corrSeq_fit}}.
+#' @param corrSeq_results_reduced Results object from \code{\link{corrSeq_fit}} containing reduced models for LRT tests.
+#' Only applicable for nbmm_agq models or when using multi-row contrasts (matrix) for nbmm_lp models.
 #' @param coefficient Character string or numeric indicator of which coefficient to summarize. Ignored if contrast is specified.
-#' @param contrast numeric vector or matrix specifying a contrast of the linear model coefficients to be tested.
+#' @param contrast Numeric vector or matrix specifying a contrast of the linear model coefficients to be tested.
 #' Number of columns must equal the number of coefficients in the model. If specified, then takes precedence over coefficient.
 #' @param p_adj_method Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}}.
-#' @param df Method for computing degrees of freedom and t-statistics.
+#' @param df Method for computing degrees of freedom for t- and F-tests.
 #' The options "Satterthwaite" and "Kenward-Roger" can only be used for
 #' models fit using nbmm_pl or lmm. Options "containment" and
-#' "residual" can be used for models fit using any method. Alternatively, a single numeric value representing the df for all tests can also be given.
+#' "residual" can be used for models fit using any method except nbmm_agq (which does not use degrees of freedom, so use df=NA).
+#' Alternatively, a single numeric value representing the df for all tests can also be given.
+#' If testing a multi-row contrast for nbmm_lp, nbmm_agq, or gee, use df=NA since these tests do not use degrees of freedom.
+#' If using a multi-row contrast for nbmm_pl or lmm, only df="Satterthwaite" and df="Kenward-Roger" are available.
 #' @param sort_results Should the results table be sorted by adjusted p-value?
+#'
+#' @details For single DF tests (single line contrasts or testing a single coefficient) all methods use a t-test except nbmm_agq.
+#' For multiple DF tests (multi-row contrasts), nbmm_pl and lmm use an F-test, nbmm_lp uses a likelihood ratio test, and gee uses a Wald test.
+#' For both single DF and multiple DF tests, nbmm_agq will perform a Wald test if no reduced model is provided. Otherwise a LRT is used.
+#'
+#' No DF is required for Wald of LRT tests, so df=NA should be used. Satterthwaite and Kenward-Rogers are only available for lmm and nbmm_pl. For multi-row contrasts
+#' for nbmm_pl and lmm, only Satterthwaite and Kenward-Rogers can be used.
 #'
 #' @return This function returns a list object with the following components:
 #'
@@ -26,7 +38,7 @@
 #'
 #'@author Elizabeth Wynn
 #'
-#' @seealso \code{\link{corrSeq_fit}} \code{\link{geeglm_small_samp}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link[glmmADMB]{glmmadmb}}
+#' @seealso \code{\link{corrSeq_fit}} \code{\link{geeglm_small_samp}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link[glmmADMB]{glmmadmb}}, \code{\link[GLMMadaptive]{mixed_model}}
 #' @examples
 #' data("simdata")
 #' sample_meta_data <- simdata$metadata
@@ -37,15 +49,31 @@
 #'
 #' ## Fit NBMM-PL models
 #' ## Use log(library size) as an offset
+#' ## Note, group and time are factors
 #' nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_pl")
 #'
 #'
-#' ## Summarize the group coefficient with Satterthwaite degrees of freedom
-#' model_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
-#'                              coefficient = "group",
+#'
+#' ## Test for differential expression between groups at any timepoints
+#' contrast_mat<-rbind(c(0, 1, 0, 0, 0, 0, 0, 0), #Difference in groups at time1
+#'                     c(0, 1, 0, 0, 0, 1, 0, 0), #Difference in groups at time2
+#'                     c(0, 1, 0, 0, 0, 0, 1, 0), #Difference in groups at time3
+#'                     c(0, 1, 0, 0, 0, 0, 0, 1)  #Difference in groups at time4
+#'                     )
+#'
+#'
+#' group_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
+#'                              contrast = contrast_mat,
+#'                              p_adj_method = 'BH',
+#'                              df = 'Satterthwaite',
+#'                              sort_results = T)
+#'
+#' ## Test for differential expression between groups at time 1
+#' group_diff_time1 <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
+#'                              coefficient = "group1",
 #'                              p_adj_method = 'BH',
 #'                              df = 'Satterthwaite',
 #'                              sort_results = T)
@@ -149,7 +177,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       idx_not_converged<-which(sapply(corrSeq_results, function(x) if(!is.null(x)) x@converged==F else T))
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmmadmb"){
-      method="nbmm_ml"
+      method="nbmm_lp"
       coef_names=names(coef(corrSeq_results[[idx_non_null_1]]))
       idx_not_converged<-which(sapply(corrSeq_results, is.null))
       idx_singular<-which(sapply(corrSeq_results, function(x){
@@ -157,9 +185,11 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       })
       )
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
-      df_methods=c("containment", "residual", NA)
+      if(joint_flag){
+        df_methods=NA
+      }else df_methods=c("containment", "residual")
     }else if(class(corrSeq_results[[idx_non_null_1]])=="MixMod"){
-        method="nbmm_adq"
+        method="nbmm_agq"
         coef_names=names(corrSeq_results[[idx_non_null_1]]$coefficients)
         idx_not_converged<-which(sapply(corrSeq_results, function(x) ifelse(is.null(x$converged), T, !x$converged)))
         idx_singular<-which(sapply(corrSeq_results, function(x){
@@ -248,20 +278,20 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
             Estimate=summary(corrSeq_results[[x]])$coefficients[coefficient,"Estimate"]
             Std.Error=summary(corrSeq_results[[x]])$coefficients[coefficient,"Std. Error"]
           }
-        }else if(method=="nbmm_ml"& !reduced_tf){
+        }else if(method=="nbmm_lp"& !reduced_tf){
           Estimate=summary(corrSeq_results[[x]])$coefficient[coefficient, "Estimate"]
           Std.Error=summary(corrSeq_results[[x]])$coefficient[coefficient, "Std. Error"]
         }
-        if(!is.numeric(df)&!is.na(df)&method!="nbmm_adq"){
+        if(!is.numeric(df)&!is.na(df)&method!="nbmm_agq"){
           df=calc_df(model=corrSeq_results[[x]], df=df, method=method)
         }
-        if(method!="nbmm_adq"&!reduced_tf){
+        if(method!="nbmm_agq"&!reduced_tf){
           t.value=Estimate/Std.Error
           p_val_raw=2*pt(-abs(t.value),
                          df=df)
           df=data.frame(Estimate=Estimate, Std.Error=Std.Error, df=df,
                         t.value=t.value, p_val_raw=p_val_raw)
-        }else if(method=="nbmm_adq"){
+        }else if(method=="nbmm_agq"){
           if(contrast_tf){
             df=tryCatch({
               df=GLMMadaptive::anova(corrSeq_results[[x]], L=rbind(contrast))$aovTab.L
@@ -283,7 +313,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
             df=summary(corrSeq_results[[x]])$coef_table[coefficient,]
             names(df)[names(df)=="p-value"]<-"p_val_raw"
           }
-        }else if(method=="nbmm_ml"&reduced_tf){
+        }else if(method=="nbmm_lp"&reduced_tf){
           df=tryCatch({
             my_aov=anova(corrSeq_results_reduced[[x]],corrSeq_results[[x]])
             df=data.frame(df=my_aov$Df[2], p_val_raw=my_aov$`Pr(>Chi)`[2])
@@ -295,16 +325,16 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         df
       })%>%dplyr::bind_rows()%>%
         dplyr::mutate(Gene=gene_names[idx_converged_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))
-        if(method!="nbmm_adq"&!reduced_tf){
+        if(method!="nbmm_agq"&!reduced_tf){
           ret=ret%>%dplyr::select(Gene, Estimate, Std.Error, df, t.value,
                                   p_val_raw, p_val_adj)
-        }else if(method=="nbmm_adq"){
+        }else if(method=="nbmm_agq"){
           if(contrast_tf){
             ret=ret%>%dplyr::select(Gene, Chisq, df, p_val_raw, p_val_adj)
           }else if(reduced_tf){
             ret=ret%>%dplyr::select(Gene, LRT, df, p_val_raw, p_val_adj )
           }else ret=ret%>%dplyr::select(Gene, Estimate, Std.Err, "z-value", p_val_raw, p_val_adj)
-        }else if(method=="nbmm_ml"& reduced_tf){
+        }else if(method=="nbmm_lp"& reduced_tf){
           ret=ret%>%dplyr::select(Gene,df, p_val_raw, p_val_adj )
         }
 
@@ -342,7 +372,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       dplyr::arrange(p_val_adj)
   }
   ret2$model_method=method
-  if(method!="nbmm_adq") ret2$df=df_name
+  if(method!="nbmm_agq") ret2$df=df_name
   rownames(ret2$summary_table)<-NULL
   return(ret2)
 }
@@ -352,9 +382,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
 #Calculate containment and residual df
 ########################################
 calc_df<-function(model, df, method){
-  if(method=="lmm"|method=="nbmm_pl"|method=="nbmm_ml"){
-    #if nbmm_ml, fit lmm in order to get zmat and xmat
-    if(method=="nbmm_ml") model=lme4::lmer(formula = model$formula, data=model$data)
+  if(method=="lmm"|method=="nbmm_pl"|method=="nbmm_lp"){
+    #if nbmm_lp, fit lmm in order to get zmat and xmat
+    if(method=="nbmm_lp") model=lme4::lmer(formula = model$formula, data=model$data)
     if(method=="lmm") model=model$fit
     ids<-names(ranef(model))
     #Mistake-not arequirement to have same number of measurements for each subject

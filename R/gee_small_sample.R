@@ -5,22 +5,13 @@
 #'estimates are calculated using one of three methods proposed in the following
 #'papers: Pan (2001), Mancl and Derouen (2001), and Wang and Long (2011).
 #'
-#'This function borrows heavily from the corresponding small sample variance estimating
-#'functions in the \pkg{geesmv}-package
-#'(\code{\link[geesmv]{GEE.var.pan}}, \code{\link[geesmv]{GEE.var.md}} and \code{\link[geesmv]{GEE.var.wl}}).
-#'In addition to combining these functions into a single function and using the \code{geeglm} function
-#'in model fitting, this function also varys from these functions in that it
-#'ensures that model offsets are properly accounted for in the calculation of
-#'small sample estimators.
-#'
 #' @param formula A two-sided linear formula object with the response
 #'  on the left of a ~ operator and the terms, separated by + operators, on the right.
-#' @param family a description of the error distribution and link
-#' function to be used in the model. Only \code{guassian} and \code{poisson}
+#' @param family The error distribution to be used in the model. Only \code{guassian} and \code{poisson}
 #' families are supported.
-#' @param data 	an optional data frame, list or environment (or object coercible by as.data.frame to a data frame)
-#' containing the variables in the model and the id variable. If not
-#' environment(formula), typically the environment from which the function is called.
+#' @param data 	an optional data frame, list or environment (or object coercible by \code{\link[base]{as.data.frame}} to a data frame)
+#' containing the variables in the model and the id variable. If not found in data, the variables are taken from
+#' \code{environment(formula)}, typically the environment from which glm is called.
 #' @param id a vector or data column name which identifies the clusters. The length of
 #' id should be the same as the number of observations. Data are
 #' assumed to be sorted so that observations on each cluster appear
@@ -37,15 +28,26 @@
 #' \code{geeglm} from the \pkg{geepack}-package was used.
 #' @param ... additional arguments passed on to \code{geepack::geeglm}.
 #'
+#' @details This function borrows heavily from the corresponding small sample variance estimating
+#'functions in the \pkg{geesmv}-package
+#'(\code{\link[geesmv]{GEE.var.pan}}, \code{\link[geesmv]{GEE.var.md}} and \code{\link[geesmv]{GEE.var.wl}}).
+#'In addition to combining these functions into a single function and using the \code{geeglm} function
+#'in model fitting, this function also varys from these functions in that it
+#'ensures that model offsets are properly accounted for in the calculation of
+#'small sample estimators.
+#'
 #' @import geepack geesmv
+#'
 #' @return This function returns a \code{geeglm} object with small modifications:
+#'
 #' \item{small.samp.var}{an additional item containing the small sample variance estimators is included in the fit object}
-#' \item{geese$vbeta}{The variance covariance matrix in the geese item from the object fit contains the small sample adjusted variance covaraince matrix.
+#' \item{geese$vbeta}{The variance covariance matrix in the geese item from the object fit contains the small sample adjusted variance covaraince matrix.}
 #'
 #'
 #'@author Elizabeth Wynn, \pkg{geesmv}-authors for underlying code used in small sample size variance estimators.
 #'
 #' @seealso \code{\link[geepack]{geeglm}}, \code{\link[geesmv]{GEE.var.pan}}, \code{\link[geesmv]{GEE.var.md}} and \code{\link[geesmv]{GEE.var.wl}}
+#'
 #' @references
 #' Mancl LA, DeRouen TA (2001). "A covariance estimator for GEE with improved small-sample properties." Biometrics, 57(1), 126-134. ISSN 0006341X. doi:10. 1111/j.0006-341X.2001.00126.x.
 #'

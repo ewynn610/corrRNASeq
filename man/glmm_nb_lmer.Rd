@@ -30,11 +30,11 @@ glmm_nb_lmer(
 An object of class \code{\link{glmm_nb_mod}}
 }
 \description{
-This function to fits a negative binomial mixed model using a
+This function fits a negative binomial mixed model using a
 psuedo-likelihood approach
 }
 \details{
-This function is similar to the function \code{\link[NBZIMM]{glmm.nb}}
+#' This function is similar to the function \code{\link[NBZIMM]{glmm.nb}}
 from the \pkg{NBZIMM} package, though it utilizes the \pkg{lmerTest} package
 rather than \pkg{nlme} package and returns and object compatible with the \pkg{pkrtest} package
 which allows for the calculation of Kenward-Roger degrees of freedom.

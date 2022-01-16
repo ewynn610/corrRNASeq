@@ -19,13 +19,12 @@ geeglm_small_samp(
 \item{formula}{A two-sided linear formula object with the response
 on the left of a ~ operator and the terms, separated by + operators, on the right.}
 
-\item{family}{a description of the error distribution and link
-function to be used in the model. Only \code{guassian} and \code{poisson}
+\item{family}{The error distribution to be used in the model. Only \code{guassian} and \code{poisson}
 families are supported.}
 
-\item{data}{an optional data frame, list or environment (or object coercible by as.data.frame to a data frame)
-containing the variables in the model and the id variable. If not
-environment(formula), typically the environment from which the function is called.}
+\item{data}{an optional data frame, list or environment (or object coercible by \code{\link[base]{as.data.frame}} to a data frame)
+containing the variables in the model and the id variable. If not found in data, the variables are taken from
+\code{environment(formula)}, typically the environment from which glm is called.}
 
 \item{id}{a vector or data column name which identifies the clusters. The length of
 id should be the same as the number of observations. Data are
@@ -47,8 +46,10 @@ The resulting object will be identical to the object created if
 \item{...}{additional arguments passed on to \code{geepack::geeglm}.}
 }
 \value{
-This function returns a \code{geeglm} object with one additional items:
-\item{small.samp.var}{small sample variance estimators using the specified method}
+This function returns a \code{geeglm} object with small modifications:
+
+\item{small.samp.var}{an additional item containing the small sample variance estimators is included in the fit object}
+\item{geese$vbeta}{The variance covariance matrix in the geese item from the object fit contains the small sample adjusted variance covaraince matrix.}
 }
 \description{
 This function fits a GEE model using the \code{geeglm} function

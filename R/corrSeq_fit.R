@@ -1,36 +1,36 @@
 #' Function to fit various types of models to longitudinal RNA-Seq data
 #'
-#' Wrapper function that fits one of four types of models to RNA-Seq data. Available model fitting methods are linear mixed models (lmm) (using transformed data), generalized estimating equations with an optional small sample adjustment (gee), and negative binomial models using either
-#' a pseudo-likelhood approach (nbmm_pl) or a maximum likelihood approach (nbmm_ml).
+#' Wrapper function that fits one of five types of models to RNA-Seq data. Available model fitting methods are linear mixed models (lmm) (using transformed data), generalized estimating equations with an optional small sample adjustment (gee), and negative binomial models using
+#' a pseudo-likelhood approach (nbmm_pl), a maximum likelihood approach with Laplace approximation (nbmm_lp), or a maximum likelihood approach with adaptive Gaussian quadrature (nbmm_agq).
 #'
-#' @param formula A one-sided linear formula describing the model effects of the model. For \code{method="lmm"}, \code{method="nbmm_pl"} and \code{method="nbmm_ml"}, random effects should be included in the formula using the syntax of the lme4 package.
-#' @param expr_mat A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{method="gee"}, \code{method="nbmm_pl"} and \code{method="nbmm_ml"}, the matrix should contain raw counts and for \code{method="lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.
+#' @param formula A one-sided linear formula describing the model variables. For models that include them, random effects should be included in the formula using the syntax of the lme4 package.
+#' @param expr_mat A (G x N) numeric matrix RNA-seq expression data with genes in rows and samples in columns. For \code{method="gee"}, \code{method="nbmm_pl"}, \code{method="nbmm_lp"} and \code{method="nbmm_agq"}, the matrix should contain raw counts and for \code{method="lmm"} the matrix should contain transformed counts (e.g. using VST from DESeq2). G = number of genes.  N = number of samples.
 #' @param gene_names An optional character vector of gene names (length G).
 #' @param sample_data Data frame with N rows containing the fixed- and random-effects terms included in the formula.  The rows of the data frame must correspond (and be in the same order as) the columns of the expression matrix.
-#' @param method Method to use to fit the models. Possible options are \code{"lmm"}, \code{"gee"}, \code{"nbmm_pl"} and \code{"nbmm_ml"}.
-#' @param parallel If on Mac or linux, use forking (via mclapply) to parallelize fits
-#' @param id Only applicable for models fit using the \code{method="gee"} method. A vector or data column name which identifies the clusters. The length of
+#' @param method Method to use to fit the models. Possible options are \code{"lmm"}, \code{"gee"}, \code{"nbmm_pl"}, \code{"nbmm_lp"} and \code{"nbmm_agq"}.
+#' @param id Only applicable for models fit using \code{method="gee"}. A vector or data column name which identifies the clusters. The length of
 #' ‘id’ should be the same as the number of observations. Data are
 #' assumed to be sorted so that observations on each cluster appear
 #' as contiguous rows in data. If data is not sorted this way, the
 #' function will not identify the clusters correctly. If \code{sort=TRUE} (default),
 #' the dataframe from the \code{data} argument is sorted by the id column to avoid
 #' this issue.
-#' @param small.samp.method Only applicable for models fit using the \code{method="gee"} method. A character string specifying the
+#' @param small.samp.method Only applicable for models fit using \code{method="gee"}. A character string specifying the
 #' small sample method. The following are permitted: "pan" for the
 #' Pan (2001) method, "md" for the Mancl and Derouen (2001) method, and "wl" for the Wang and Long (2011) method.
 #' If \code{small.samp.method} is null, small sample variance estimates are not computed.
-#' @param cores Number of cores to use (default is 2)
-#' @param ... additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="gee"}),
-#' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"})
+#' @param parallel A logical variable indicating whether forking (via mclapply) should be used to parallelize fits. Only available on Mac or linux machines.
+#' @param cores Number of cores to use if parallelizing (default is 2)
+#' @param ... additional arguments passed on to \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}} (\code{method="gee"}),
+#' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}), \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_lp"}), or \code{\link[GLMMadaptive]{mixed_model}} (method="nbmm_agq").
 #'
 #' @return A list of length G of model objects from the following functions: \code{\link[lmerTest]{lmer}} (\code{method="lmm"}), \code{\link{gee_small_sample}}(\code{method="lmm"}),
-#' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}) or \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_ml"}).
+#' \code{\link{glmm_nb_lmer}} (\code{method="nbmm_pl"}), \code{\link[glmmADMB]{glmmadmb}} (\code{method="nbmm_lp"}), or \code{\link[GLMMadaptive]{mixed_model}} (method="nbmm_agq").
 #'
 #'
 #' @author Elizabeth Wynn
 #'
-#' @seealso \code{\link{corrSeq_summary}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link{gee_small_sample}} and \code{\link[glmmADMB]{glmmadmb}}
+#' @seealso \code{\link{corrSeq_summary}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link{gee_small_sample}}, \code{\link[glmmADMB]{glmmadmb}}, and \code{\link[GLMMadaptive]{mixed_model}}
 #'
 #' @examples
 #' data("simdata")
@@ -54,13 +54,20 @@
 #'                            sample_data = sample_meta_data,
 #'                            method="nbmm_pl")
 #'
-#' ## Fit NBMM-ML models
-#' ## Random effects must be factors
-#' sample_meta_data$ids<-factor(sample_meta_data$ids)
-#' nbmm_ml_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
+#'
+#' ## Fit NBMM-AGQ models
+#' nbmm_agq_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
 #'                            expr_mat = counts,
 #'                            sample_data = sample_meta_data,
-#'                            method="nbmm_ml")
+#'                            method="nbmm_agq")
+#'
+#' ## Fit NBMM-LP models
+#' ## Random effects must be factors
+#' sample_meta_data$ids<-factor(sample_meta_data$ids)
+#' nbmm_lp_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
+#'                            expr_mat = counts,
+#'                            sample_data = sample_meta_data,
+#'                            method="nbmm_lp")
 #'
 #' ## Fit LMM models to transformed data
 #' ## Use the variance transformed counts in the simdata object
@@ -81,9 +88,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                         sample_data = NULL, # A data frame with sample meta data
                         method,
                         id,
-                        offset=NULL,
                         small.samp.method=NULL,
-                        random=NULL,
                         parallel = F,
                         cores = 2,
                         ...
@@ -115,6 +120,11 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
       stop("sample_data is missing.")}
 
     ### Inconsistent information ###
+
+    method_choices=c("gee", "nbmm_pl", "nbmm_lp", "nbmm_agq", "lmm")
+
+    if(!(method%in%method_choices) ) {
+      stop("Invalid method")}
 
     if((ncol(expr_mat)==nrow(sample_data))==F ) {
       stop("The expression matrix and sample data include differing numbers of samples.")}
@@ -150,10 +160,12 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
       args<-list(formula=form_sub, data=quote(dat_sub), id=substitute(id), small.samp.method=small.samp.method, ...)
 
       method_call=geeglm_small_samp
-    }else if(method=="nbmm_ml"){
+    }else if(method=="nbmm_lp"){
+      ## Make sure random effects are factor
       random=paste("(", lme4::findbars(form_sub), ")")
       random<-sapply(random, function(x) gsub(" ", "", stringr::str_split(stringr::str_split(x, pattern = "\\)")[[1]], "\\|")[[1]][2]))
       if(sum(sapply(random, function(x) class(sample_data[,x])!="factor"))>0) stop("All grouping variables in random effects must be factors")
+
       args<-list(formula=form_sub, data=quote(dat_sub), #random=random,
                  family = "nbinom",...)
       method_call=glmmADMB::glmmadmb
@@ -161,13 +173,12 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
     }else if(method=="nbmm_pl"){
       args<-list(formula=form_sub, data=quote(dat_sub),...)
       method_call=glmm_nb_lmer
-    }else if(method=="ptmixed"){
-      args=list(fixef.formula=form_sub, id=substitute(id), offset=substitute(offset),
-                data=quote(dat_sub),trace=F,maxit=c(1000,100), ...)
-      method_call=ptmixed::ptmixed
-    }else if(method=="nbmm_adq"){
-      args=args2=list(fixed=form_sub, random=random, data=quote(dat_sub),
-                family=GLMMadaptive::negative.binomial(), ...)
+    }else if(method=="nbmm_agq"){
+      ## Separate random and fixed effects
+      random=as.formula(paste0("~",paste0(lme4::findbars(form_sub), collapse = "+")))
+      fixed_eff=lme4::nobars(form_sub)
+      args=args2=list(fixed=fixed_eff, random=random, data=quote(dat_sub),
+                      family=GLMMadaptive::negative.binomial(), ...)
       args2$family=poisson()
       method_call=GLMMadaptive::mixed_model
     }
@@ -179,7 +190,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                  ret_sub <- tryCatch({
                                    tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                  }, error = function(e) {
-                                   if(method=="nbmm_adq"){
+                                   if(method=="nbmm_agq"){
                                      #If error, try fitting with a poisson model
                                      ret_sub2  <- tryCatch({
                                        tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args2)))
@@ -188,7 +199,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                    ret_sub2
                                  })
                                  ret2 <- ret_sub
-                                 if(method=="nbmm_ml"&!is.null(ret2)) ret2$data=dat_sub
+                                 if(method=="nbmm_lp"&!is.null(ret2)) ret2$data=dat_sub
                                  ret2
                                })
     }
@@ -201,7 +212,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                   ret_sub <- tryCatch({
                                     tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args)))
                                   }, error = function(e) {
-                                    if(method=="nbmm_adq"){
+                                    if(method=="nbmm_agq"){
                                       #If error, try fitting with a poisson model
                                       ret_sub2  <- tryCatch({
                                         tmp1 <- suppressWarnings(suppressMessages(do.call(method_call, args2)))
@@ -210,7 +221,7 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
                                     ret_sub2
                                   })
                                   ret2 <- ret_sub
-                                  if(method=="nbmm_ml"&!is.null(ret2)) ret2$data=dat_sub
+                                  if(method=="nbmm_lp"&!is.null(ret2)) ret2$data=dat_sub
                                   ret2
                                 })
     }
@@ -218,8 +229,3 @@ corrSeq_fit <- function(formula = NULL, # Formula for fixed effects
   names(ret)<-gene_names
   return(ret)
 }
-
-
-
-
-

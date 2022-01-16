@@ -6,30 +6,42 @@
 \usage{
 corrSeq_summary(
   corrSeq_results = NULL,
+  corrSeq_results_reduced = NULL,
   coefficient = NULL,
+  contrast = NULL,
   p_adj_method = "BH",
   df = "residual",
   sort_results = T
 )
 }
 \arguments{
-\item{corrSeq_results}{Results object from running \code{\link{corrSeq_fit}}.}
+\item{corrSeq_results}{Results object from \code{\link{corrSeq_fit}}.}
 
-\item{coefficient}{Character string or numeric indicator of which coefficient to summarize}
+\item{corrSeq_results_reduced}{Results object from \code{\link{corrSeq_fit}} containing reduced models for LRT tests.
+Only applicable for nbmm_agq models or when using multi-row contrasts (matrix) for nbmm_lp models.}
+
+\item{coefficient}{Character string or numeric indicator of which coefficient to summarize. Ignored if contrast is specified.}
+
+\item{contrast}{Numeric vector or matrix specifying a contrast of the linear model coefficients to be tested.
+Number of columns must equal the number of coefficients in the model. If specified, then takes precedence over coefficient.}
 
 \item{p_adj_method}{Method for adjusting for multiple comparisons (default is Benjamini-Hochberg). See \code{\link[stats]{p.adjust.methods}}.}
 
-\item{df}{Method for computing degrees of freedom and t-statistics.
+\item{df}{Method for computing degrees of freedom for t- and F-tests.
 The options "Satterthwaite" and "Kenward-Roger" can only be used for
 models fit using nbmm_pl or lmm. Options "containment" and
-"residual" can be used for models fit using any method. Alternatively, a single numeric value representing the df for all tests can also be given.}
+"residual" can be used for models fit using any method except nbmm_agq (which does not use degrees of freedom, so use df=NA).
+Alternatively, a single numeric value representing the df for all tests can also be given.
+If testing a multi-row contrast for nbmm_lp, nbmm_agq, or gee, use df=NA since these tests do not use degrees of freedom.
+If using a multi-row contrast for nbmm_pl or lmm, only df="Satterthwaite" and df="Kenward-Roger" are available.}
 
 \item{sort_results}{Should the results table be sorted by adjusted p-value?}
 }
 \value{
 This function returns a list object with the following components:
 
-\item{coefficient}{Name of the coefficient being summarized.}
+\item{coefficient}{Name of the coefficient being summarized (if given).}
+\item{contrast_mat}{Contrast matrix (if given)}
 \item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
 \item{df}{Method for computing the degrees of freedom.}
 \item{p_adj_method}{Method for adjusting the raw p-values.}
@@ -37,7 +49,15 @@ This function returns a list object with the following components:
 \item{method}{Method used to fit the models.}
 }
 \description{
-Conducts t-tests on individual regression coefficients from models fit from the \code{\link{corrSeq_fit}} function.
+Conducts hypothesis testing on models fit using the \code{\link{corrSeq_fit}} function.
+}
+\details{
+For single DF tests (single line contrasts or testing a single coefficient) all methods use a t-test except nbmm_agq.
+For multiple DF tests (multi-row contrasts), nbmm_pl and lmm use an F-test, nbmm_lp uses a likelihood ratio test, and gee uses a Wald test.
+For both single DF and multiple DF tests, nbmm_agq will perform a Wald test if no reduced model is provided. Otherwise a LRT is used.
+
+No DF is required for Wald of LRT tests, so df=NA should be used. Satterthwaite and Kenward-Rogers are only available for lmm and nbmm_pl. For multi-row contrasts
+for nbmm_pl and lmm, only Satterthwaite and Kenward-Rogers can be used.
 }
 \examples{
 data("simdata")
@@ -48,15 +68,31 @@ counts=simdata$counts[1:10,]
 
 ## Fit NBMM-PL models
 ## Use log(library size) as an offset
-nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log(lib_size)),
+## Note, group and time are factors
+nbmm_pl_fit <- corrSeq_fit(formula = ~ group * time+(1|ids)+offset(log_offset),
                            expr_mat = counts,
                            sample_data = sample_meta_data,
                            method="nbmm_pl")
 
 
-## Summarize the group coefficient with Satterthwaite degrees of freedom
-model_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
-                             coefficient = "group",
+
+## Test for differential expression between groups at any timepoints
+contrast_mat<-rbind(c(0, 1, 0, 0, 0, 0, 0, 0), #Difference in groups at time1
+                    c(0, 1, 0, 0, 0, 1, 0, 0), #Difference in groups at time2
+                    c(0, 1, 0, 0, 0, 0, 1, 0), #Difference in groups at time3
+                    c(0, 1, 0, 0, 0, 0, 0, 1)  #Difference in groups at time4
+                    )
+
+
+group_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
+                             contrast = contrast_mat,
+                             p_adj_method = 'BH',
+                             df = 'Satterthwaite',
+                             sort_results = T)
+
+## Test for differential expression between groups at time 1
+group_diff_time1 <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
+                             coefficient = "group1",
                              p_adj_method = 'BH',
                              df = 'Satterthwaite',
                              sort_results = T)
@@ -64,7 +100,7 @@ model_sum <-corrSeq_summary(corrSeq_results = nbmm_pl_fit,
 
 }
 \seealso{
-\code{\link{corrSeq_fit}} \code{\link{geeglm_small_samp}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link[glmmADMB]{glmmadmb}}
+\code{\link{corrSeq_fit}} \code{\link{geeglm_small_samp}}, \code{\link{glmm_nb_lmer}}, \code{\link[lmerTest]{lmer}}, \code{\link[glmmADMB]{glmmadmb}}, \code{\link[GLMMadaptive]{mixed_model}}
 }
 \author{
 Elizabeth Wynn
