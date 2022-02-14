@@ -20,7 +20,7 @@ Imports:
     stats,
     matrixcalc,
     GLMMadaptive,
-    ptmixed
+    doBy
 Depends: pbkrtest, lmerSeq
 Remotes: stop-pre16/lmerSeq
 Authors@R: 
