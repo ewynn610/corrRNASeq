@@ -90,6 +90,13 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
                             df = "residual", # Method for computing degrees of freedom and t-statistics. Options are "Satterthwaite" and "Kenward-Roger"
                             sort_results = T # Should the results table be sorted by adjusted p-value?
 ){
+  if(!is.null(contrast)){
+    corrSeq_results_reduced=NULL
+  }
+  if(!is.null(contrast)|!is.null(corrSeq_results_reduced)){
+    coefficient=NULL
+  }
+
   #Save df name in new variable (df is used to save values later)
   df_name=df
 
@@ -109,9 +116,17 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
   ## First non-null index
   idx_non_null_1=which(!sapply(corrSeq_results, is.null))[1]
 
+  ## First non-null index for reduced mods
+  if(reduced_tf){
+    idx_non_null_1_reduced=which(!sapply(corrSeq_results_reduced, is.null))[1]
+  }
+
   ##LMM
   if(identical(names(corrSeq_results[[idx_non_null_1]]),c("fit", "gene"))){
     method="lmm"
+    if(reduced_tf){
+      stop("Reduced models should only be provided for nbmm_agq or nbmm_lp")
+    }
     if(joint_flag){
       df_methods=c("Satterthwaite", "Kenward-Roger")
     }else df_methods=c("Satterthwaite", "Kenward-Roger", "containment", "residual")
@@ -164,7 +179,9 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       #Get coef names
       coef_names <- names(corrSeq_results[[idx_non_null_1]]$coefficients)
       #df methods for gee
-      df_methods=c("containment", "residual")
+      if(contrast_tf){
+        df_methods=NA
+      }else df_methods=c("containment", "residual")
       idx_not_converged<-which(sapply(corrSeq_results, is.null))
       idx_converged_not_singular=which(!(1:length(corrSeq_results)%in% idx_not_converged))
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmm_nb_mod"){
@@ -185,11 +202,18 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       })
       )
       idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
-      if(joint_flag){
+      if(reduced_tf){
+        if(class(corrSeq_results_reduced[[idx_non_null_1]])!="glmmadmb"){
+          stop("Method for full and reduced models do not match")
+        }
         df_methods=NA
       }else df_methods=c("containment", "residual")
     }else if(class(corrSeq_results[[idx_non_null_1]])=="MixMod"){
         method="nbmm_agq"
+        if(reduced_tf){
+        if(class(corrSeq_results_reduced[[idx_non_null_1_reduced]])!="MixMod"){
+          stop("Method for full and reduced models do not match")
+        }}
         coef_names=names(corrSeq_results[[idx_non_null_1]]$coefficients)
         idx_not_converged<-which(sapply(corrSeq_results, function(x) ifelse(is.null(x$converged), T, !x$converged)))
         idx_singular<-which(sapply(corrSeq_results, function(x){
@@ -217,9 +241,16 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       }
     }
 
+    if(!(method%in% c("nbmm_agq", "nbmm_lp"))& reduced_tf){
+      stop("Reduced models should only be provided for nbmm_agq or nbmm_lp")
+    }
 
     if(!(p_adj_method %in% p.adjust.methods)){
       stop("Invalid p_adj_method")
+    }
+
+    if(method=="nbmm_lp"&contrast_tf){
+      stop("Contrast testing not available for method nbmm_lp")
     }
 
     if(!(df %in% df_methods)&!is.numeric(df)){
@@ -262,8 +293,8 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         df=calc_df(model = corrSeq_results[[idx_non_null_1]],df = df, method=method)
       }
       ret=lapply(idx_converged_not_singular, function(x){
-        #Estimate and std. error for gee
-        if(method=="gee"){
+        #### If using degrees of freedom (GEE, NBMM-LP, NBMM-PL singe effects tests)
+        if(method=="gee"&!contrast_tf){
           Estimate=corrSeq_results[[x]]$coefficients[coefficient]
           #if small sample method was used
           if(!is.null(corrSeq_results[[x]]$small.samp.va)){
@@ -283,52 +314,63 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
           Std.Error=summary(corrSeq_results[[x]])$coefficient[coefficient, "Std. Error"]
         }
         if(!is.numeric(df)&!is.na(df)&method!="nbmm_agq"){
-          df=calc_df(model=corrSeq_results[[x]], df=df, method=method)
+          res_df=calc_df(model=corrSeq_results[[x]], df=df, method=method)
         }
-        if(method!="nbmm_agq"&!reduced_tf){
+
+        ## NA degrees of freedom
+        if(method!="nbmm_agq"&!reduced_tf&!(method=="gee"&contrast_tf)){
           t.value=Estimate/Std.Error
           p_val_raw=2*pt(-abs(t.value),
                          df=df)
-          df=data.frame(Estimate=Estimate, Std.Error=Std.Error, df=df,
+          res_df=data.frame(Estimate=Estimate, Std.Error=Std.Error, df=df,
                         t.value=t.value, p_val_raw=p_val_raw)
         }else if(method=="nbmm_agq"){
           if(contrast_tf){
-            df=tryCatch({
-              df=GLMMadaptive::anova(corrSeq_results[[x]], L=rbind(contrast))$aovTab.L
-              colnames(df)[colnames(df)=="Pr(>|Chi|)"]<-"p_val_raw"
-              df
+            res_df=tryCatch({
+              res_df=GLMMadaptive::anova(corrSeq_results[[x]], L=rbind(contrast))$aovTab.L
+              colnames(res_df)[colnames(res_df)=="Pr(>|Chi|)"]<-"p_val_raw"
+              res_df
             },error=function(e){
               data.frame(Chisq=NA, df=NA, p_val_raw=NA)
             })
 
           }else if(reduced_tf){
-            df=tryCatch({
+            res_df=tryCatch({
               my_aov=GLMMadaptive::anova(corrSeq_results[[x]], corrSeq_results_reduced[[x]])
-              df=data.frame(LRT=my_aov$LRT, df=my_aov$df, p_val_raw=my_aov$p.value)
-              df
+              res_df=data.frame(LRT=my_aov$LRT, df=my_aov$df, p_val_raw=my_aov$p.value)
+              res_df
             },error=function(e){
               data.frame(LRT=NA, df=NA, p_val_raw=NA)
             })
           }else{
-            df=summary(corrSeq_results[[x]])$coef_table[coefficient,]
-            names(df)[names(df)=="p-value"]<-"p_val_raw"
+            res_df=summary(corrSeq_results[[x]])$coef_table[coefficient,]
+            names(res_df)[names(res_df)=="p-value"]<-"p_val_raw"
           }
         }else if(method=="nbmm_lp"&reduced_tf){
-          df=tryCatch({
+          res_df=tryCatch({
             my_aov=anova(corrSeq_results_reduced[[x]],corrSeq_results[[x]])
-            df=data.frame(df=my_aov$Df[2], p_val_raw=my_aov$`Pr(>Chi)`[2])
-            df
+            res_df=data.frame(df=my_aov$Df[2], p_val_raw=my_aov$`Pr(>Chi)`[2])
+            res_df
           },error=function(e){
             data.frame(df=NA, p_val_raw=NA)
           })
+        }else if (method=="gee"& contrast_tf){
+            res_df=tryCatch({
+              test=doBy::esticon(corrSeq_results[[x]], contrast, joint.test = T)
+              data.frame(Chisq=test$X2.stat,df=test$DF, p_val_raw=test$`Pr(>|X^2|)`)
+            },
+            error=function(e){
+              data.frame(Chisq=NA,df=NA, p_val_raw=NA)
+            })
+
         }
-        df
+        res_df
       })%>%dplyr::bind_rows()%>%
         dplyr::mutate(Gene=gene_names[idx_converged_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))
-        if(method!="nbmm_agq"&!reduced_tf){
+        if(method!="nbmm_agq"&!reduced_tf&(method=="gee"&!contrast_tf)){
           ret=ret%>%dplyr::select(Gene, Estimate, Std.Error, df, t.value,
                                   p_val_raw, p_val_adj)
-        }else if(method=="nbmm_agq"){
+        }else if(method=="nbmm_agq"|(method=="gee"&contrast_tf)){
           if(contrast_tf){
             ret=ret%>%dplyr::select(Gene, Chisq, df, p_val_raw, p_val_adj)
           }else if(reduced_tf){

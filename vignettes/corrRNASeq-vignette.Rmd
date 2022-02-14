@@ -63,11 +63,11 @@ The table below shows the type of hypothesis tests used and the DF methods avail
 
 | Method       | Single DF Test | Multiple DF Test | DF Methods 
 | :-------------- | :-----------------| :-----------------| :----------------------------| 
-|gee | t-test | Wald test |containment or residual; Only applicable for single DF tests|
+|gee | t-test (Wald test if contrast provided) | Wald test |containment or residual; Only applicable for t-tests|
 |lmm | t-test | F-test | containment, residual, ,Kenward-Roger or Satterthwaite; For multiple DF tests only Kenward-Roger or Satterthwaite|
-|nbmm_agq| LRT or Wald test | LRT or Wald test| Not applicable |
-|nbmm_lp| t-test | LRT | containment or residual; Only applicable for single DF tests |
-|nbmm_pl| t-test | F-tesst | containment, residual, ,Kenward-Roger or Satterthwaite; For multiple DF tests only Kenward-Roger or Satterthwaite |
+|nbmm_agq| z-test (LRT if reduced model is provided and Wald test if contrast is provided) | LRT or Wald test| Not applicable |
+|nbmm_lp| t-test (LRT if reduced model is provided) | LRT | containment or residual; Only applicable for t-tests |
+|nbmm_pl| t-test | F-test | containment, residual, ,Kenward-Roger or Satterthwaite; For multiple DF tests only Kenward-Roger or Satterthwaite |
 
 
 
@@ -111,7 +111,7 @@ The two main functions in the ```corrRNASeq``` package are ```corrSeq_fit```, wh
 
 | Option               | Description                                         | Default |
 | :---------------------- | :--------------------------------------------------- | :----------------|
-|corrSeq_results_reduced | Results object from corrSeq_fit containing reduced models for LRT tests. Only applicable for ```nbmm_agq``` models or when using multi-row contrasts (matrix) for nbmm_lp models. |
+|corrSeq_results_reduced | Results object from corrSeq_fit containing reduced models for LRT tests. Only applicable when performing LRT tests using ```nbmm_agq``` or ```nbmm_lp``` model fits. |
 | p_adj_method        | Method for adjusting for multiple comparisons. See ```p.adjust.methods``` from the ```stats``` package. | ```"BH"```| 
 | df        | Method for computing degrees of freedom for t- and F-tests. The options ```"Satterthwaite"``` and ```"Kenward-Roger"``` can only be used for models fit using ```nbmm_pl``` or ```lmm```. Options ```"containment"``` and ```"residual"``` can be used for models fit using any method except ```nbmm_agq``` (which does not use degrees of freedom, so use ```df=NA```). Alternatively, a single numeric value representing the df for all tests can also be given. If testing a multi-row contrast for ```nbmm_lp```, ```nbmm_agq```, or ```gee```, use ```df=NA``` since these tests do not use degrees of freedom. If using a multi-row contrast for ```nbmm_pl``` or ```lmm```, only ```df="Satterthwaite"``` and ```df="Kenward-Roger"``` are available.| ```"residual"``` |
 | sort_results        |Should the results table be sorted by adjusted p-value? | ```TRUE```|
@@ -231,7 +231,7 @@ gee_sum <-corrSeq_summary(corrSeq_results = gee_fit,
 nbmm_lp_sum <-corrSeq_summary(corrSeq_results = nbmm_lp_fit,
                                     coefficient = 2,
                                     p_adj_method = 'BH',
-                                    df = 'containment',
+                                    df = "residual",
                                     sort_results = T)
 
 ## Test for differential expression between groups at any timepoint with NBMM-PL model
