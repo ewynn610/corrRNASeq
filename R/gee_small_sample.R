@@ -344,7 +344,7 @@ geeglm_small_samp<-function (formula,
   gee.fit$geese$vbeta<- cov.beta
   names(gee.fit$small.samp.var)<-names(gee.fit$coefficients)
   }
-  gee.fit$call<-call
+  gee.fit$call<-NULL
   return(gee.fit)
 }
 
