@@ -179,7 +179,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       #Get coef names
       coef_names <- names(corrSeq_results[[idx_non_null_1]]$coefficients)
       #df methods for gee
-      if(contrast_tf){
+      if(joint_flag){
         df_methods=NA
       }else df_methods=c("containment", "residual")
       idx_not_converged<-which(sapply(corrSeq_results, is.null))
@@ -294,12 +294,19 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       }
       ret=lapply(idx_converged_not_singular, function(x){
         #### If using degrees of freedom (GEE, NBMM-LP, NBMM-PL singe effects tests)
-        if(method=="gee"&!contrast_tf){
-          Estimate=corrSeq_results[[x]]$coefficients[coefficient]
-          #if small sample method was used
-          if(!is.null(corrSeq_results[[x]]$small.samp.va)){
-            Std.Error=sqrt(corrSeq_results[[x]]$small.samp.var[coefficient])
-          }else Std.Error=summary(corrSeq_results[[x]])$coefficients[coefficient,"Std.err"]
+        if(method=="gee"&!joint_flag){
+          ## For single line contrasts
+          if(contrast_tf){
+            test=doBy::esticon(corrSeq_results[[x]], contrast, joint.test = F)
+            Estimate=test$estimate
+            Std.Error=test$std.error
+          }else{ ## If they gave a coefficient
+            Estimate=corrSeq_results[[x]]$coefficients[coefficient]
+            #if small sample method was used
+            if(!is.null(corrSeq_results[[x]]$small.samp.va)){
+              Std.Error=sqrt(corrSeq_results[[x]]$small.samp.var[coefficient])
+            }else Std.Error=summary(corrSeq_results[[x]])$coefficients[coefficient,"Std.err"]
+          }
         }else if(method=="nbmm_pl"){
           if(contrast_tf){
             cont=lmerTest::contest(corrSeq_results[[x]], L=contrast, joint=F)$Estimate
@@ -318,7 +325,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         }
 
         ## NA degrees of freedom
-        if(method!="nbmm_agq"&!reduced_tf&!(method=="gee"&contrast_tf)){
+        if(method!="nbmm_agq"&!reduced_tf&!(method=="gee"&joint_flag)){
           t.value=Estimate/Std.Error
           p_val_raw=2*pt(-abs(t.value),
                          df=df)
@@ -354,7 +361,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
           },error=function(e){
             data.frame(df=NA, p_val_raw=NA)
           })
-        }else if (method=="gee"& contrast_tf){
+        }else if (method=="gee"& joint_flag){
             res_df=tryCatch({
               test=doBy::esticon(corrSeq_results[[x]], contrast, joint.test = T)
               data.frame(Chisq=test$X2.stat,df=test$DF, p_val_raw=test$`Pr(>|X^2|)`)
@@ -367,10 +374,10 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         res_df
       })%>%dplyr::bind_rows()%>%
         dplyr::mutate(Gene=gene_names[idx_converged_not_singular], p_val_adj=p.adjust(p_val_raw, method = p_adj_method))
-        if(method!="nbmm_agq"&!reduced_tf&(method=="gee"&!contrast_tf)){
+        if(method!="nbmm_agq"&!reduced_tf&(method=="gee"&!joint_flag)){
           ret=ret%>%dplyr::select(Gene, Estimate, Std.Error, df, t.value,
                                   p_val_raw, p_val_adj)
-        }else if(method=="nbmm_agq"|(method=="gee"&contrast_tf)){
+        }else if(method=="nbmm_agq"|(method=="gee"&joint_flag)){
           if(contrast_tf){
             ret=ret%>%dplyr::select(Gene, Chisq, df, p_val_raw, p_val_adj)
           }else if(reduced_tf){
@@ -442,7 +449,7 @@ calc_df<-function(model, df, method){
       df_val=nrow(model@frame)-xz_rank
     }
   }else if(method=="gee"){
-    if(length(unique(table(model$id)))!=1) stop("Must have the same number of measurements for each subject")
+    #if(length(unique(table(model$id)))!=1) stop("Must have the same number of measurements for each subject")
     x_mat=model.matrix(model$formula, model$data)
     if(df=="residual"){
       x_rank=qr(x_mat)$rank
