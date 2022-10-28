@@ -131,7 +131,7 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       df_methods=c("Satterthwaite", "Kenward-Roger")
     }else df_methods=c("Satterthwaite", "Kenward-Roger", "containment", "residual")
     if(!(df %in% df_methods)&!is.numeric(df)){
-      stop("Invalid df method")
+      stop("Invalid df method for given the model fitting method")
     }
     #If using a different method, first just analyze using satterthwait
     #This gives us t-statistic, etc.
