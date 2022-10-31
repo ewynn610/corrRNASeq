@@ -91,6 +91,20 @@ geeglm_small_samp<-function (formula,
                              ...)
 {
   call <- match.call(expand.dots = TRUE)
+  if(sort) {
+    mf=model.frame(formula, data)
+    names(mf)=gsub("offset\\(|\\)$", "",names(mf))
+    ## EW Only can sort if dataframe is provided with all formula/id variables
+    if(is.null(call$data)){
+      stop("Cannot sort by ID unless data is provided to the data argument")
+    }else if(any(!(c(names(mf), paste(call$id)) %in% names(data)))){
+      stop("All formula and id variables must be in provided data frame in order to sort by ID ")
+    }else{
+      data<-data[order(data[[paste(call$id)]]),]
+      call$data=quote(data)
+    }
+
+  }
 
   init <- model.frame(formula, data)
   init$num <- 1:length(init[, 1])
@@ -109,18 +123,7 @@ geeglm_small_samp<-function (formula,
     mat <- as.data.frame(model.matrix(formula, m))
   }
   #################Make sure data is sorted################
-  if(sort) {
-    ## EW Only can sort if dataframe is provided with all formula/id variables
-    if(is.null(call$data)){
-      stop("Cannot sort by ID unless data is provided to the data argument")
-    }else if(any(!(c(names(m), paste(call$id)) %in% names(data)))){
-      stop("All formula and id variables must be in provided data frame in order to sort by ID ")
-    }else{
-      data<-data[order(data[[paste(call$id)]]),]
-      call$data=quote(data)
-    }
 
-  }
 
   ###Use geepack model (geesmv fits "gee" package model)###
   #Calling geeglm
