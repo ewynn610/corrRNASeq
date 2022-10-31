@@ -101,10 +101,9 @@ geeglm_small_samp<-function (formula,
       stop("All formula and id variables must be in provided data frame in order to sort by ID ")
     }else{
       data<-data[order(data[[paste(call$id)]]),]
-      call$data=quote(data)
     }
-
   }
+  call$data=quote(data)
 
   init <- model.frame(formula, data)
   init$num <- 1:length(init[, 1])
