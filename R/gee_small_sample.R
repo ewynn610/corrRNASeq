@@ -9,8 +9,7 @@
 #'  on the left of a ~ operator and the terms, separated by + operators, on the right.
 #' @param family The error distribution to be used in the model. Only \code{guassian} and \code{poisson}
 #' families are supported.
-#' @param data 	an optional data frame, list or environment (or object coercible by \code{\link[base]{as.data.frame}} to a data frame)
-#' containing the variables in the model and the id variable. If not found in data, the variables are taken from
+#' @param data 	an optional data frame containing the variables in the model and the id variable. If not found in data, the variables are taken from
 #' \code{environment(formula)}, typically the environment from which glm is called.
 #' @param id a vector or data column name which identifies the clusters. The length of
 #' id should be the same as the number of observations. Data are
@@ -92,10 +91,19 @@ geeglm_small_samp<-function (formula,
                              ...)
 {
   call <- match.call(expand.dots = TRUE)
-  if (is.null(data$id)) {
-    index <- which(names(data) == id)
-    data$id <- data[, index]
+  if(sort) {
+    mf=model.frame(formula, data)
+    names(mf)=gsub("offset\\(|\\)$", "",names(mf))
+    ## EW Only can sort if dataframe is provided with all formula/id variables
+    if(is.null(call$data)){
+      stop("Cannot sort by ID unless data is provided to the data argument")
+    }else if(any(!(c(names(mf), paste(call$id)) %in% names(data)))){
+      stop("All formula and id variables must be in provided data frame in order to sort by ID ")
+    }else{
+      data<-data[order(data[[paste(call$id)]]),]
+    }
   }
+  call$data=quote(data)
 
   init <- model.frame(formula, data)
   init$num <- 1:length(init[, 1])
@@ -114,10 +122,7 @@ geeglm_small_samp<-function (formula,
     mat <- as.data.frame(model.matrix(formula, m))
   }
   #################Make sure data is sorted################
-  if(sort) {
-    data<-data[order(data[[paste(call$id)]]),]
-    call$data=quote(data)
-  }
+
 
   ###Use geepack model (geesmv fits "gee" package model)###
   #Calling geeglm
@@ -344,7 +349,7 @@ geeglm_small_samp<-function (formula,
   gee.fit$geese$vbeta<- cov.beta
   names(gee.fit$small.samp.var)<-names(gee.fit$coefficients)
   }
-  gee.fit$call<-NULL
+  #gee.fit$call<-NULL
   return(gee.fit)
 }
 
