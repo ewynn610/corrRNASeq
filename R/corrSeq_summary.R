@@ -17,6 +17,7 @@
 #' If testing a multi-row contrast for nbmm_lp, nbmm_agq, or gee, use df=NA since these tests do not use degrees of freedom.
 #' If using a multi-row contrast for nbmm_pl or lmm, only df="Satterthwaite" and df="Kenward-Roger" are available.
 #' @param sort_results Should the results table be sorted by adjusted p-value?
+#' @param include_singular Should singular genes be included in results table?
 #'
 #' @details For single DF tests (single line contrasts or testing a single coefficient) all methods use a t-test except nbmm_agq.
 #' For multiple DF tests (multi-row contrasts), nbmm_pl and lmm use an F-test, nbmm_lp uses a likelihood ratio test, and gee uses a Wald test.
@@ -32,7 +33,7 @@
 #' \item{summary_table}{A summary table including the gene name, estimate, standard error, degrees of freedom, test statistic, and raw and adjusted p-value.}
 #' \item{df}{Method for computing the degrees of freedom.}
 #' \item{p_adj_method}{Method for adjusting the raw p-values.}
-#' \item{singular_fits}{Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA. Not applicable for models fit using \code{"gee"}.}
+#' \item{singular_fits}{Gene names for genes that resulted in singular model fits. The summary information for these genes will be NA unless include_singular is set to TRUE. Not applicable for models fit using \code{"gee"}.}
 #' \item{method}{Method used to fit the models.}
 #'
 #'
@@ -88,7 +89,8 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
                             contrast=NULL, #Matrix with matrix to be tested
                             p_adj_method = "BH", # Method for adjusting for multiple comparisons (default is Benjamini-Hochberg)
                             df = "residual", # Method for computing degrees of freedom and t-statistics. Options are "Satterthwaite" and "Kenward-Roger"
-                            sort_results = T # Should the results table be sorted by adjusted p-value?
+                            sort_results = T, # Should the results table be sorted by adjusted p-value?
+                            include_singular=F
 ){
   if(!is.null(contrast)){
     corrSeq_results_reduced=NULL
@@ -141,7 +143,8 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     if(contrast_tf){
       ret2=lmerSeq.contrast(corrSeq_results, contrast_mat = rbind(contrast),
                            p_adj_method = p_adj_method,
-                           ddf=df2, sort_results = sort_results)
+                           ddf=df2, sort_results = sort_results,
+                           include_singular = include_singular)
       ## Remove upper, lower if one dimensional contrast
       # Just so results match
       if(!joint_flag) ret2$summary_table=ret2$summary_table%>%dplyr::select(-upper, -lower)%>%dplyr::rename(Std.Error="Std..Error")
@@ -192,7 +195,13 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
       }else df_methods=c("containment", "residual", "Satterthwaite", "Kenward-Roger")
       idx_singular<-which(sapply(corrSeq_results, function(x) if(is.null(x)) F else lme4::isSingular(x)))
       idx_not_converged<-which(sapply(corrSeq_results, function(x) if(!is.null(x)) x@converged==F else T))
-      idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
+      if(include_singular){
+        idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged)))
+
+      }else{
+        idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
+
+      }
     }else if(class(corrSeq_results[[idx_non_null_1]])=="glmmadmb"){
       method="nbmm_lp"
       coef_names=names(coef(corrSeq_results[[idx_non_null_1]]))
@@ -201,7 +210,13 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         any(sapply(x$S, function(x) any(diag(x)<1e-05)))
       })
       )
-      idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
+      if(include_singular){
+        idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged)))
+
+      }else{
+        idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
+
+      }
       if(reduced_tf){
         if(class(corrSeq_results_reduced[[idx_non_null_1]])!="glmmadmb"){
           stop("Method for full and reduced models do not match")
@@ -219,8 +234,14 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
         idx_singular<-which(sapply(corrSeq_results, function(x){
           any(diag(x$D)<1e-05)
         }))
-        idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
-      df_methods=NA
+        if(include_singular){
+          idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged)))
+
+        }else{
+          idx_converged_not_singular <- which(!(1:length(corrSeq_results)%in% c(idx_not_converged, idx_singular)))
+
+        }
+        df_methods=NA
         }
 
 
@@ -408,7 +429,11 @@ corrSeq_summary <- function(corrSeq_results = NULL, # Results object from runnin
     }
     if(method !="gee"){
       genes_singular_fits <- as.character(gene_names[idx_singular])
-      genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
+      if(include_singular){
+        genes_null=c(as.character(gene_names[idx_not_converged]))%>%unique()
+      }else{
+        genes_null=c(genes_singular_fits, as.character(gene_names[idx_not_converged]))%>%unique()
+      }
       ret2$singular_fits = genes_singular_fits
     }else genes_null=as.character(gene_names[idx_not_converged])
     ret2$summary_table$Gene<-as.character(ret2$summary_table$Gene)
